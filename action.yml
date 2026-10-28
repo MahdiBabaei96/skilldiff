@@ -1,0 +1,143 @@
+name: "skilldiff"
+description: "Run before/after skill experiments on a pull request and post which workflows stopped following their rules."
+author: "Mahdi Babaei"
+branding:
+  icon: "git-pull-request"
+  color: "orange"
+
+inputs:
+  config:
+    description: "Path to skilldiff.toml (tasks and run settings)."
+    default: "skilldiff.toml"
+  skills-path:
+    description: >
+      Folder of skills in this repository (for example .claude/skills). When set on a
+      pull request, 'before' is this folder at the PR's base commit and 'after' is the
+      same folder at the PR head, overriding [before]/[after] in the config.
+    default: ""
+  anthropic-api-key:
+    description: "API key used by Claude Code for the runs."
+    required: true
+  repeats:
+    description: "Runs per arm per task. Overrides the config when set."
+    default: ""
+  model:
+    description: "Model alias or name. Overrides the config when set."
+    default: ""
+  fail-on:
+    description: "regression | substitution | never"
+    default: "regression"
+  comment:
+    description: "Post or update a sticky pull request comment with the report."
+    default: "true"
+  claude-code-version:
+    description: "npm version of @anthropic-ai/claude-code to install."
+    default: "latest"
+  github-token:
+    description: "Token used to post the comment."
+    default: ${{ github.token }}
+
+outputs:
+  regression:
+    description: "'true' when at least one workflow regressed."
+    value: ${{ steps.run.outputs.regression }}
+  headline:
+    description: "One-line summary of the result."
+    value: ${{ steps.run.outputs.headline }}
+  report-dir:
+    description: "Folder with report.md, report.html, report.json and raw runs."
+    value: ${{ steps.run.outputs.report-dir }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install Claude Code and skilldiff
+      shell: bash
+      run: |
+        npm install -g "@anthropic-ai/claude-code@${{ inputs.claude-code-version }}"
+        python -m pip install --quiet "${{ github.action_path }}"
+        claude --version
+        skilldiff --version
+
+    - name: Check out the base version of the skills
+      id: base
+      if: ${{ inputs.skills-path != '' && github.event.pull_request.base.sha != '' }}
+      shell: bash
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        SKILLS_PATH: ${{ inputs.skills-path }}
+      run: |
+        git fetch --no-tags --depth=1 origin "$BASE_SHA"
+        BASE_DIR="$RUNNER_TEMP/skilldiff-base"
+        git worktree add --detach "$BASE_DIR" "$BASE_SHA"
+        mkdir -p "$BASE_DIR/$SKILLS_PATH" "$GITHUB_WORKSPACE/$SKILLS_PATH"
+        echo "before=$BASE_DIR/$SKILLS_PATH" >> "$GITHUB_OUTPUT"
+        echo "after=$GITHUB_WORKSPACE/$SKILLS_PATH" >> "$GITHUB_OUTPUT"
+
+    - name: Run skilldiff
+      id: run
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        BEFORE: ${{ steps.base.outputs.before }}
+        AFTER: ${{ steps.base.outputs.after }}
+      run: |
+        OUT="$RUNNER_TEMP/skilldiff-out"
+        ARGS=(run -c "${{ inputs.config }}" -o "$OUT" --force --fail-on never)
+        if [ -n "$BEFORE" ]; then ARGS+=(--before-skills "$BEFORE" --after-skills "$AFTER"); fi
+        if [ -n "${{ inputs.repeats }}" ]; then ARGS+=(--repeats "${{ inputs.repeats }}"); fi
+        if [ -n "${{ inputs.model }}" ]; then ARGS+=(--model "${{ inputs.model }}"); fi
+        skilldiff "${ARGS[@]}"
+        echo "report-dir=$OUT" >> "$GITHUB_OUTPUT"
+        python - "$OUT/report.json" >> "$GITHUB_OUTPUT" <<'PY'
+        import json, sys
+        from skilldiff.report import headline
+        r = json.load(open(sys.argv[1]))
+        print(f"regression={'true' if r['regression'] else 'false'}")
+        print(f"substitution={'true' if r['substitution'] or r['counts'].get('less-reliable') else 'false'}")
+        print(f"headline={headline(r)}")
+        PY
+        cat "$OUT/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload report and raw runs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: skilldiff-report
+        path: ${{ runner.temp }}/skilldiff-out
+        if-no-files-found: ignore
+
+    - name: Post sticky comment
+      if: ${{ inputs.comment == 'true' && github.event.pull_request.number != '' && steps.run.outcome == 'success' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+        REPORT: ${{ steps.run.outputs.report-dir }}/report.md
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        BODY_FILE="$RUNNER_TEMP/skilldiff-comment.md"
+        { cat "$REPORT"; echo; echo "<sub>Full HTML report and transcripts: [workflow run artifacts]($RUN_URL)</sub>"; } > "$BODY_FILE"
+        # GitHub comments are limited to 65536 characters
+        python -c "import sys;p=sys.argv[1];t=open(p).read();open(p,'w').write(t if len(t)<65000 else t[:64000]+'\n\n… (truncated; see the artifact)\n')" "$BODY_FILE"
+        EXISTING=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+          --jq '.[] | select(.body | startswith("<!-- skilldiff-report -->")) | .id' | head -n1)
+        if [ -n "$EXISTING" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$EXISTING" -F body=@"$BODY_FILE" > /dev/null
+        else
+          gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@"$BODY_FILE" > /dev/null
+        fi
+
+    - name: Fail on regression
+      if: ${{ (inputs.fail-on == 'regression' && steps.run.outputs.regression == 'true') || (inputs.fail-on == 'substitution' && (steps.run.outputs.regression == 'true' || steps.run.outputs.substitution == 'true')) }}
+      shell: bash
+      env:
+        HEADLINE: ${{ steps.run.outputs.headline }}
+      run: |
+        echo "::error::$HEADLINE"
+        exit 1
