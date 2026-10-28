@@ -13,7 +13,7 @@ guard stop following their rules.
 $ skilldiff run -c examples/01-description-trim/skilldiff.toml
 skilldiff: 50 runs (5 tasks × 2 arms × 5 repeats), 10 at a time
   ...
-⚠️ Changing `pr-review-checklist` caused 1 of 5 workflows to stop following its rules (3 rules broken).
+⚠️ Changing `pr-review-checklist` was followed by rule failures in 1 of 5 workflows (3 observed rule drops).
 ```
 
 | Workflow | Result | Expected skill ran first | Rules followed |
@@ -50,7 +50,7 @@ measures that.
    (**after**), several times each, every run in a fresh throwaway git workspace.
 3. The report shows, per workflow:
    - **skill selection**: which skill opened first, before vs after (including *no skill*),
-   - **broken rules**: pass rates before vs after, with a one-sided Fisher exact test and a confidence label,
+   - **broken rules**: pass rates before vs after, with raw and Holm-adjusted one-sided Fisher exact p-values,
    - **evidence**: the offending command, a diff of the file that should not have changed, the commit message,
    - **artifact differences**: which files the agent created or changed in each arm,
    - **cost**: mean API cost, turns, and time per run.
@@ -115,8 +115,11 @@ skilldiff run --dry-run        # prints the exact claude commands
 skilldiff run                  # runs and writes skilldiff-out/report.{md,html,json}
 ```
 
-`skilldiff run` exits with code 1 when a workflow regressed (`--fail-on substitution` also fails
-when a different skill ran, `--fail-on never` always exits 0), so it works in any CI.
+`skilldiff run` exits with code **2** if any workflow has failed or missing runs (inconclusive),
+**1** for a detected rule regression, and **0** for a complete run without configured findings.
+`--fail-on substitution` also fails when skill selection changes or reliability drops.
+`--fail-on never` explicitly opts out of both finding and inconclusive exit codes; the report
+still says inconclusive. An incomplete experiment must not be treated as a clean pass.
 
 ## Configuration
 
@@ -200,16 +203,20 @@ compare arms → report.md (PR comment) · report.html (timelines) · report.jso
 ```
 
 - `--setting-sources project` keeps your personal `~/.claude` skills and settings out of
-  both arms. Claude Code's built-in skills are present in both, so they cancel out.
+  both arms. Claude Code's built-in skills are present in both; their interactions with added skills may still differ.
 - The first skill opened is what the study found decides the outcome, so it is reported separately
   from "any skill used".
-- Saved transcripts drop partial-message chunks, session ids, and machine-specific fields, so
-  output folders are small and safe to attach to CI runs.
+- Saved transcripts drop partial-message chunks and some identifiers to reduce size. This is
+  **not redaction**: prompts, tool inputs/outputs, source files, local paths, and secrets can
+  remain in reports, transcripts, and file snapshots. Review all outputs before sharing.
 - `skilldiff report <out> --min-drop 0.3` re-scores saved runs at a new threshold with no new API calls.
 
-**Safety:** runs use `bypassPermissions` inside throwaway temp directories, so the agent can
-write files and run commands there without prompts. Only test skills you'd be willing to run,
-and prefer CI or a container for untrusted ones.
+**Execution boundary:** temporary directories separate experiment files; they are **not a
+security sandbox**. The default `bypassPermissions` mode disables Claude permission prompts,
+and subprocesses inherit your environment. Agents can access files, credentials, and network
+resources available to your account outside the temp directory. Only run trusted skills
+locally; use a disposable container or runner with restricted credentials and network access
+for untrusted skills. Configuration isolation is not OS-level confinement.
 
 ## GitHub Action
 
@@ -239,8 +246,11 @@ jobs:
 ```
 
 The action checks out the base commit's skills next to the PR's, runs the experiment, posts
-(and on later pushes, updates) one sticky comment with the Markdown report, uploads the HTML
-report and raw transcripts as an artifact, and fails the check on regression.
+(and on later pushes, updates) one sticky comment with the Markdown report, uploads the reports,
+and fails the check on regression or incomplete experiments. Raw transcripts
+and file snapshots are **not uploaded by default**; `upload-raw: "true"` opts in. Reports and PR
+comments can also contain sensitive evidence; disable `comment` for private experiments and
+review artifacts before sharing. Never run untrusted PR code with privileged credentials.
 
 | Input | Default | |
 |---|---|---|
@@ -249,10 +259,11 @@ report and raw transcripts as an artifact, and fails the check on regression.
 | `anthropic-api-key` | required | |
 | `repeats`, `model` | from config | overrides |
 | `fail-on` | `regression` | `regression`, `substitution`, or `never` |
-| `comment` | `true` | post the sticky PR comment |
+| `comment` | `true` | post the sticky PR comment (may include sensitive evidence) |
+| `upload-raw` | `false` | upload unredacted transcripts and file snapshots |
 | `claude-code-version` | `latest` | npm version to install |
 
-Outputs: `regression` (`true`/`false`), `headline`, `report-dir`.
+Outputs: `regression` and `inconclusive` (`true`/`false`), `headline`, `report-dir`.
 
 ## Use it from Claude
 
@@ -286,9 +297,15 @@ Then ask something like *"Will adding this review skill break any of my existing
 
 - **It costs money and time.** Runs = tasks × 2 × repeats. Small tasks cost about $0.06 per
   run on Sonnet 5.5 and under a cent on Haiku 5.5. A 5-task, 3-repeat experiment takes a few minutes with `parallel = 10`.
-- **Small samples.** With 3 repeats the strongest possible evidence is p = 0.05. Results are
-  labelled `high`/`medium`/`low` confidence. Treat `medium` and `low` as reasons to re-run with
-  more repeats, not as proof.
+- **Exploratory statistics.** Reports show sample counts, observed drops in percentage points,
+  raw one-sided Fisher exact p-values, and Holm-adjusted p-values across all comparable rule
+  and expected-skill selection tests, including tests without a drop. With 3 repeats per arm,
+  the smallest raw p-value is 0.05; adjustment often makes it larger. Threshold-based regression
+  flags describe observed drops, not statistical certainty or a probability the change caused
+  them. Rules may overlap (one missing file can fail several checks), and runs can share model
+  or service effects. More repeats and independent reproduction are needed for stronger evidence.
+- **Incomplete runs.** Any errored or missing run makes the experiment inconclusive. Pass rates
+  describe only completed runs and may be biased when failures differ between arms.
 - **Your tasks bound what it can see.** A regression in a workflow you didn't describe won't
   show up.
 - **Claude Code only** for now. The stream-json parser is tested against a real 2.1.312

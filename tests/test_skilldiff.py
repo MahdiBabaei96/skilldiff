@@ -11,7 +11,7 @@ from skilldiff import config as config_mod
 from skilldiff import rules as rules_mod
 from skilldiff import transcript as transcript_mod
 from skilldiff import workspace as ws_mod
-from skilldiff.stats import confidence, fisher_one_sided
+from skilldiff.stats import fisher_one_sided, holm_adjust
 
 HERE = Path(__file__).parent
 FAKE = f"{sys.executable} {HERE / 'fake_claude.py'}"
@@ -24,7 +24,13 @@ def test_fisher_extremes():
     assert fisher_one_sided(5, 5, 0, 5) == pytest.approx(1 / 252)
     assert fisher_one_sided(3, 3, 3, 3) == pytest.approx(1.0)
     assert fisher_one_sided(0, 0, 0, 3) == 1.0
-    assert confidence(0.05) == "high" and confidence(0.2) == "medium" and confidence(0.5) == "low"
+
+
+def test_holm_adjusts_the_full_family_in_original_order():
+    assert holm_adjust([]) == []
+    assert holm_adjust([0.05]) == [0.05]
+    assert holm_adjust([0.04, 0.01, 1.0]) == pytest.approx([0.08, 0.03, 1.0])
+    assert holm_adjust([0.03, 0.04, 0.01]) == pytest.approx([0.06, 0.06, 0.03])
 
 
 # ---------------------------------------------------------------- transcript
@@ -202,14 +208,20 @@ def test_end_to_end_detects_regression(project, monkeypatch):
     rules = {r["id"]: r for r in by["review"]["rules"]}
     assert rules["read-only"]["before"] == {"pass": 3, "n": 3}
     assert rules["read-only"]["after"] == {"pass": 0, "n": 3}
-    assert rules["read-only"]["confidence"] == "high"
+    assert rules["read-only"]["drop_pp"] == 100
+    assert rules["read-only"]["p"] == pytest.approx(0.05)
+    assert rep["statistics"]["comparisons"] == 7  # five rules and two skill selections
+    assert rules["read-only"]["p_adjusted"] == pytest.approx(0.35)
+    assert not rep["inconclusive"]
     assert "+y = 2" in rules["read-only"]["evidence"][0]["evidence"]
     assert rules["read-only"]["evidence"][0]["count"] == 3
     assert rules["check-ok"]["status"] == "unchanged"
     assert by["review"]["selection"]["taken_by"] == {"greedy-review": 3}
     assert rep["new_skills"] == ["greedy-review"]
     md = (project / "out" / "report.md").read_text()
-    assert "caused 1 of 2 workflows to stop following its rules" in md
+    assert "rule failures in 1 of 2 workflows" in md
+    assert "Holm p=0.350" in md and "confidence high" not in md
+    assert "not redacted" in md
     assert "<!-- skilldiff-report -->" in md
     html = (project / "out" / "report.html").read_text()
     assert "greedy-review" in html and "<table>" in html
@@ -229,14 +241,19 @@ def test_control_shows_no_change(project, monkeypatch):
     assert "no detected regressions" in (project / "out2" / "report.md").read_text()
 
 
-def test_crashing_agent_is_reported_not_scored(project, monkeypatch):
+@pytest.mark.parametrize("fail_on,expected", [("regression", 2), ("substitution", 2), ("never", 0)])
+def test_crashing_agent_is_inconclusive(project, monkeypatch, fail_on, expected):
     monkeypatch.chdir(project)
     monkeypatch.setenv("FAKE_CLAUDE_CRASH", "1")
-    code = cli.main(["run", "-o", "out3", "--repeats", "1", "--task", "commit"])
-    assert code == 0
+    code = cli.main(["run", "-o", "out3", "--repeats", "1", "--task", "commit", "--fail-on", fail_on])
+    assert code == expected
     rep = json.loads((project / "out3" / "report.json").read_text())
     t = rep["tasks"][0]
     assert t["verdict"] == "no-data" and t["after"]["errors"] == 1
+    assert rep["inconclusive"] and t["incomplete"]
+    assert "Inconclusive" in (project / "out3/report.md").read_text()
+    assert "Inconclusive" in (project / "out3/report.html").read_text()
+    assert cli.main(["report", "out3", "--fail-on", "regression"]) == 2
     assert any("simulated crash" in m or "exited 3" in m for m in t["after"]["error_messages"])
 
 
@@ -247,6 +264,48 @@ def test_dry_run_lists_isolated_commands(project, monkeypatch, capsys):
     assert out.count("--setting-sources project") == 12
     assert "--output-format stream-json" in out
     assert not (project / "out4").exists()
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_partial_runs_cannot_produce_a_clean_pass(project, monkeypatch, missing):
+    from skilldiff.compare import compare
+    from skilldiff import report
+
+    monkeypatch.chdir(project)
+    assert cli.main(["run", "-o", "partial", "--task", "commit"]) == 0
+    meta, records = cli._load_records(project / "partial")
+    i = next(i for i, r in enumerate(records) if r["arm"] == "after")
+    if missing:
+        records.pop(i)
+    else:
+        records[i]["transcript"].update(is_error=True, error="rate limited")
+    cmp = compare(meta, records)
+    assert cmp["inconclusive"]
+    assert cmp["tasks"][0]["after"]["valid"] == 2
+    assert cli._exit_code(cmp, "regression") == 2
+    assert cli._exit_code(cmp, "substitution") == 2
+    assert cli._exit_code(cmp, "never") == 0
+    assert "Inconclusive" in report.headline(cmp)
+    md = report.to_markdown(cmp)
+    assert "incomplete" in md and "✅" not in report.headline(cmp)
+    if not missing:
+        assert "rate limited" in md
+
+
+def test_nonzero_exit_overrides_success_event(project, monkeypatch):
+    from skilldiff import runner
+
+    cfg = config_mod.load(project / "skilldiff.toml")
+    skills, _ = ws_mod.discover_skills(cfg.before.skills)
+
+    def failed_process(cmd, cwd, env, timeout, out_path):
+        out_path.write_text(json.dumps({"type": "result", "subtype": "success", "result": "done"}) + "\n")
+        return 1, False, "late process failure"
+
+    monkeypatch.setattr(runner, "_run_process", failed_process)
+    rec = runner.run_one(cfg, runner.Job(cfg.tasks[0], cfg.before, 0), skills, project / "nonzero")
+    assert rec["transcript"]["is_error"]
+    assert "agent exited 1" in rec["transcript"]["error"]
 
 
 def test_compact_events_strips_chunks_and_identifiers(tmp_path):

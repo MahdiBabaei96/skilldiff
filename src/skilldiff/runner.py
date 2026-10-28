@@ -76,8 +76,8 @@ _INIT_KEEP = ("type", "subtype", "cwd", "model", "claude_code_version", "skills"
 
 
 def _compact_events(path: Path) -> None:
-    """Keep the transcript small and shareable: drop partial-message chunks,
-    session identifiers, and machine-specific fields of the init event."""
+    """Compact the transcript. This is not redaction: prompts, tool payloads,
+    file content, and credentials in them can remain in the saved events."""
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
@@ -124,8 +124,10 @@ def run_one(cfg: Config, job: Job, skills: list, out_dir: Path, keep_workspace: 
         tr.is_error, tr.error = True, f"timed out after {cfg.run.timeout_seconds}s"
     elif code is None:
         tr.is_error, tr.error = True, stderr
-    elif code != 0 and not tr.got_result:
-        tr.is_error, tr.error = True, f"agent exited {code}: {stderr.strip()[-400:]}"
+    elif code != 0:
+        tr.is_error = True
+        if not tr.got_result or not tr.error:
+            tr.error = f"agent exited {code}: {stderr.strip()[-400:]}"
     if tr.duration_ms is None:
         tr.duration_ms = int(wall * 1000)
 

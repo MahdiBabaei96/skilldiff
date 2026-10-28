@@ -44,7 +44,9 @@ jobs:
         env:
           REGRESSION: ${{ steps.skilldiff.outputs.regression }}
           HEADLINE: ${{ steps.skilldiff.outputs.headline }}
+          INCONCLUSIVE: ${{ steps.skilldiff.outputs.inconclusive }}
         run: |
           echo "$HEADLINE"
           test "$REGRESSION" = "true"
+          test "$INCONCLUSIVE" = "false"
           grep -q "read-only" "${{ steps.skilldiff.outputs.report-dir }}/report.md"

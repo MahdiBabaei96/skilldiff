@@ -122,6 +122,8 @@ def _write_reports(out: Path, meta: dict, records: list[dict]) -> dict:
 def _exit_code(cmp: dict, fail_on: str) -> int:
     if fail_on == "never":
         return 0
+    if cmp.get("inconclusive"):
+        return 2
     if cmp["regression"]:
         return 1
     if fail_on == "substitution" and (cmp["substitution"] or cmp["counts"].get("less-reliable")):
@@ -138,6 +140,9 @@ def cmd_run(args) -> int:
         for j in runner.plan(cfg, cfg.run.repeats):
             print(f"{j.task.id}\t{j.arm.name}\t#{j.rep}\t" + " ".join(runner.agent_command(cfg, j.task, j.arm)))
         return 0
+    print("Notice: temporary workspaces are not a security sandbox. Agents inherit your environment; "
+          "bypassPermissions disables permission prompts. Use a disposable container or runner for untrusted skills. "
+          "Reports, transcripts, and file artifacts are not redacted; review them before sharing.", file=sys.stderr)
     if out.exists() and any(out.iterdir()):
         if not args.force:
             print(f"error: output folder {out} is not empty (use --force to replace it)", file=sys.stderr)
@@ -246,7 +251,7 @@ def main(argv=None) -> int:
     r.add_argument("-o", "--out", default="skilldiff-out")
     r.add_argument("--force", action="store_true", help="replace an existing output folder")
     r.add_argument("--fail-on", choices=["regression", "substitution", "never"], default="regression",
-                   help="exit 1 when this is found (default: regression)")
+                   help="exit 1 for findings, 2 for incomplete experiments; never opts out of both (default: regression)")
     r.add_argument("--keep-workspaces", action="store_true", help="keep temp workspaces for inspection")
     r.add_argument("--dry-run", action="store_true", help="print the planned agent commands and exit")
     _arm_flags(r)
