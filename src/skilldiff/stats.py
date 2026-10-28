@@ -19,14 +19,18 @@ def fisher_one_sided(before_pass: int, before_n: int, after_pass: int, after_n: 
     return min(1.0, p)
 
 
-def confidence(p: float) -> str:
-    # With 3 repeats per arm, 3/3 -> 0/3 gives exactly p = 0.05, the strongest
-    # evidence that sample size can produce, so the boundary is inclusive.
-    if p <= 0.05:
-        return "high"
-    if p < 0.25:
-        return "medium"
-    return "low"
+def holm_adjust(ps: list[float]) -> list[float]:
+    """Holm-adjust a predeclared family of tests, preserving input order.
+
+    Includes tests with no observed drop; selecting only failures first would
+    understate the number of comparisons. Valid under arbitrary dependence.
+    """
+    adjusted = [1.0] * len(ps)
+    previous = 0.0
+    for rank, i in enumerate(sorted(range(len(ps)), key=ps.__getitem__)):
+        previous = min(1.0, max(previous, ps[i] * (len(ps) - rank)))
+        adjusted[i] = previous
+    return adjusted
 
 
 def rate(k: int, n: int) -> float | None:

@@ -1,7 +1,9 @@
 <!-- skilldiff-report -->
 ## skilldiff: will this skill break my setup?
 
-**⚠️ Adding `team-conventions` caused 1 of 5 workflows to stop following its rules (1 rule broken).**
+**⚠️ Adding `team-conventions` was followed by rule failures in 1 of 5 workflows (1 observed rule drop).**
+
+> Privacy: reports, transcripts, and file artifacts are not redacted. Review before sharing.
 
 | Workflow | Result | Expected skill ran first | Rules followed | Cost / run |
 |---|---|---|---|---|
@@ -15,11 +17,11 @@
 
 > I'm done with the discount feature, please commit it.
 
-**First skill opened** (expected `commit-helper`): before `commit-helper` 5× · after `commit-helper` 5×
+**First skill opened** (expected `commit-helper`): before `commit-helper` 5× · after `commit-helper` 5× · drop 0 pp (raw p=1.000, Holm p=1.000)
 
 | Rule | Before | After | Change |
 |---|---|---|---|
-| `conventional-commit` – Conventional Commit format | 5/5 | 2/5 | 🔴 broken · confidence medium (p=0.083) |
+| `conventional-commit` – Conventional Commit format | 5/5 | 2/5 | 🔴 observed drop 60 pp (raw p=0.083, Holm p=1.000) |
 | `changelog-in-commit` – CHANGELOG.md is part of the commit | 5/5 | 5/5 |  |
 | `code-as-is` – commit the change exactly as written | 5/5 | 5/5 |  |
 | `no-push` | 5/5 | 5/5 |  |
@@ -48,7 +50,7 @@ Claude-Session: <session-url-redacted>
 
 > Document the payments module in the README.
 
-**First skill opened** (expected `docs-writer`): before `docs-writer` 5× · after `team-conventions` 3×, `docs-writer` 2× · confidence **medium** (p=0.083)
+**First skill opened** (expected `docs-writer`): before `docs-writer` 5× · after `team-conventions` 3×, `docs-writer` 2× · drop 60 pp (raw p=0.083, Holm p=1.000)
 
 | Rule | Before | After | Change |
 |---|---|---|---|
@@ -66,7 +68,7 @@ Claude-Session: <session-url-redacted>
 
 > Check shop/config.py for security problems.
 
-**First skill opened** (expected `security-audit`): before no skill 5× · after no skill 3×, `security-audit` 1×, `team-conventions` 1×
+**First skill opened** (expected `security-audit`): before no skill 5× · after no skill 3×, `security-audit` 1×, `team-conventions` 1× · drop -20 pp (raw p=1.000, Holm p=1.000)
 
 | Rule | Before | After | Change |
 |---|---|---|---|
@@ -83,4 +85,4 @@ Claude-Session: <session-url-redacted>
 
 **Cost of this experiment:** $0.23 (before $0.11, after $0.12). Cost / run columns compare mean API cost per run.
 
-<sub>5 repeats per arm, runs interleaved · model `claude-haiku-5-5` · Claude Code 2.1.312 · skilldiff 0.1.0 · rule broken = pass rate dropped by ≥50 points; p = one-sided Fisher exact test</sub>
+<sub>5 repeats per arm, runs interleaved · model `claude-haiku-5-5` · Claude Code 2.1.312 · skilldiff 0.1.0 · rule broken = pass rate dropped by ≥50 points; p = one-sided Fisher exact test; Holm adjustment across 27 comparisons. Threshold flags describe observed drops, not statistical certainty; small samples need more repeats.</sub>

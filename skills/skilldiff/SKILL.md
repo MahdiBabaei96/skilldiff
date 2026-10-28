@@ -79,20 +79,31 @@ Runs = tasks × 2 × repeats. On Sonnet a small task costs roughly $0.05–0.10 
 on Haiku less than a cent. **Tell the user the run count and a rough cost, and get a yes
 before running.** Use `repeats = 3` to explore and 5 or more before acting on a result.
 
+## Execution and output boundaries
+
+Temporary workspaces are not a security sandbox. By default Claude uses `bypassPermissions`
+and inherits the environment; it can access files and network resources outside that folder.
+Use only trusted skills locally; use a disposable container or runner with restricted
+credentials for untrusted skills. Reports, transcripts, and file snapshots are not redacted.
+Review them before sharing; raw CI uploads require the explicit `upload-raw` input.
+
 ## 5. Run and read the report
 
 ```bash
 skilldiff run -c skilldiff.toml -o skilldiff-out
 ```
 
-Exit code 1 means at least one workflow regressed. Read `skilldiff-out/report.md`; the
+Exit code 2 means the experiment is incomplete (failed or missing runs); do not call it a pass.
+Exit code 1 means at least one workflow regressed in a complete experiment. Read `skilldiff-out/report.md`; the
 HTML report has per-run timelines. Explain it in this order:
 
 1. The headline: which workflows broke and which rules stopped being followed.
 2. For each regressed task, which skill ran instead (`no skill` means the agent skipped
    skills entirely) and the evidence (offending command, diff of a protected file, missing file).
-3. The confidence label. With 3 repeats the strongest possible p-value is 0.05. Present
-   `medium` or `low` results as signals worth re-running with more repeats, not as proof.
+3. The sample counts, observed drop, raw p-value, and Holm-adjusted p-value. Holm covers
+   all comparable rule and selection tests, not just failures. With 3 repeats the smallest
+   raw p-value is 0.05. Treat threshold flags as exploratory observations, not proof or
+   high-confidence causal claims. Recommend more repeats and independent reproduction.
 4. Cost difference per run.
 
 ## 6. Suggest fixes, then re-test

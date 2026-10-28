@@ -217,6 +217,7 @@
       "prompt": "Can you review shop/payments.py before I merge it?",
       "expect_skill": "pr-review-checklist",
       "verdict": "unchanged",
+      "incomplete": false,
       "weak_signal": true,
       "before": {
         "runs": 5,
@@ -314,8 +315,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -331,8 +333,9 @@
             "n": 5
           },
           "status": "weaker",
-          "p": null,
-          "confidence": null,
+          "p": 0.261905,
+          "p_adjusted": 1.0,
+          "drop_pp": 40.0,
           "evidence": []
         },
         {
@@ -348,8 +351,9 @@
             "n": 5
           },
           "status": "weaker",
-          "p": null,
-          "confidence": null,
+          "p": 0.261905,
+          "p_adjusted": 1.0,
+          "drop_pp": 40.0,
           "evidence": []
         },
         {
@@ -365,8 +369,9 @@
             "n": 5
           },
           "status": "weaker",
-          "p": null,
-          "confidence": null,
+          "p": 0.261905,
+          "p_adjusted": 1.0,
+          "drop_pp": 40.0,
           "evidence": []
         }
       ],
@@ -384,8 +389,9 @@
           "(none)": 3
         },
         "status": "weaker",
-        "p": null,
-        "confidence": null
+        "p": 0.261905,
+        "p_adjusted": 1.0,
+        "drop_pp": 40.0
       },
       "artifacts": [
         {
@@ -401,6 +407,7 @@
       "prompt": "Check shop/config.py for security problems.",
       "expect_skill": "security-audit",
       "verdict": "unchanged",
+      "incomplete": false,
       "weak_signal": false,
       "before": {
         "runs": 5,
@@ -496,8 +503,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -513,8 +521,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -530,8 +539,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -547,8 +557,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -564,8 +575,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         }
       ],
@@ -583,8 +595,9 @@
           "(none)": 5
         },
         "status": "unchanged",
-        "p": null,
-        "confidence": null
+        "p": 1.0,
+        "p_adjusted": 1.0,
+        "drop_pp": 0.0
       },
       "artifacts": [],
       "cost_delta_usd": 4.1e-05
@@ -594,6 +607,7 @@
       "prompt": "I'm done with the discount feature, please commit it.",
       "expect_skill": "commit-helper",
       "verdict": "unchanged",
+      "incomplete": false,
       "weak_signal": false,
       "before": {
         "runs": 5,
@@ -697,8 +711,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -714,8 +729,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -731,8 +747,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -748,8 +765,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -765,8 +783,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         }
       ],
@@ -782,8 +801,9 @@
         },
         "taken_by": {},
         "status": "unchanged",
-        "p": null,
-        "confidence": null
+        "p": 1.0,
+        "p_adjusted": 1.0,
+        "drop_pp": 0.0
       },
       "artifacts": [
         {
@@ -799,6 +819,7 @@
       "prompt": "Add tests for shop/payments.py.",
       "expect_skill": "test-writer",
       "verdict": "unchanged",
+      "incomplete": false,
       "weak_signal": false,
       "before": {
         "runs": 5,
@@ -894,8 +915,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -911,8 +933,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -928,8 +951,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -945,8 +969,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         }
       ],
@@ -962,8 +987,9 @@
         },
         "taken_by": {},
         "status": "unchanged",
-        "p": null,
-        "confidence": null
+        "p": 1.0,
+        "p_adjusted": 1.0,
+        "drop_pp": 0.0
       },
       "artifacts": [
         {
@@ -979,6 +1005,7 @@
       "prompt": "Document the payments module in the README.",
       "expect_skill": "docs-writer",
       "verdict": "unchanged",
+      "incomplete": false,
       "weak_signal": false,
       "before": {
         "runs": 5,
@@ -1074,8 +1101,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -1091,8 +1119,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -1108,8 +1137,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         },
         {
@@ -1125,8 +1155,9 @@
             "n": 5
           },
           "status": "unchanged",
-          "p": null,
-          "confidence": null,
+          "p": 1.0,
+          "p_adjusted": 1.0,
+          "drop_pp": 0.0,
           "evidence": []
         }
       ],
@@ -1142,8 +1173,9 @@
         },
         "taken_by": {},
         "status": "unchanged",
-        "p": null,
-        "confidence": null
+        "p": 1.0,
+        "p_adjusted": 1.0,
+        "drop_pp": 0.0
       },
       "artifacts": [
         {
@@ -1164,6 +1196,13 @@
     "after": 0.108205
   },
   "warnings": [],
+  "inconclusive": false,
+  "statistics": {
+    "method": "one-sided Fisher exact",
+    "adjustment": "Holm",
+    "comparisons": 27,
+    "family": "all comparable task rules and expected-skill selections"
+  },
   "regression": false,
   "substitution": false
 }

@@ -54,11 +54,15 @@ def headline(cmp: dict) -> str:
     n = len(cmp["tasks"])
     c = cmp["counts"]
     subj = _subject(cmp)
+    if cmp.get("inconclusive"):
+        incomplete = sum(t.get("incomplete", False) for t in cmp["tasks"])
+        return (f"⚫ Inconclusive: {incomplete} of {n} workflows have failed or missing runs. "
+                f"Observed rule regressions: {c.get('regressed', 0)}; re-run before drawing conclusions.")
     if c.get("regressed"):
         k = c["regressed"]
         r = cmp["broken_rules"]
-        return (f"⚠️ {subj} caused {k} of {n} workflow{'s' if n != 1 else ''} to stop following "
-                f"{'their' if k > 1 else 'its'} rules ({r} rule{'s' if r != 1 else ''} broken).")
+        return (f"⚠️ {subj} was followed by rule failures in {k} of {n} workflow{'s' if n != 1 else ''} "
+                f"({r} observed rule drop{'s' if r != 1 else ''}).")
     if c.get("substituted"):
         k = c["substituted"]
         return (f"🟠 {subj} changed which skill runs in {k} of {n} workflow{'s' if n != 1 else ''}. "
@@ -70,12 +74,14 @@ def headline(cmp: dict) -> str:
     weak = sum(1 for t in cmp["tasks"] if t.get("weak_signal"))
     tail = (f" {weak} got worse by less than the threshold; re-run with more repeats to be sure."
             if weak else "")
-    return f"✅ {subj} caused no detected regressions across {n} workflow{'s' if n != 1 else ''}.{tail}"
+    return f"✅ {subj} showed no detected regressions across {n} workflow{'s' if n != 1 else ''}.{tail}"
 
 
 def to_markdown(cmp: dict, max_evidence_chars: int = 900) -> str:
     m = cmp["meta"]
     out = [MARKER, "## skilldiff: will this skill break my setup?", "", f"**{headline(cmp)}**", ""]
+    out.append("> Privacy: reports, transcripts, and file artifacts are not redacted. Review before sharing.")
+    out.append("")
     for w in cmp.get("warnings", []):
         out.append(f"> ⚠️ {w}")
     if cmp.get("warnings"):
@@ -92,12 +98,12 @@ def to_markdown(cmp: dict, max_evidence_chars: int = 900) -> str:
         nb = sum(r["before"]["n"] for r in t["rules"])
         na = sum(r["after"]["n"] for r in t["rules"])
         rules_s = f"{rb}/{nb} → {ra}/{na}" if t["rules"] else "–"
-        weak = " · ↘ below threshold" if t.get("weak_signal") else ""
+        weak = (" · ↘ below threshold" if t.get("weak_signal") else "") + (" · incomplete" if t.get("incomplete") else "")
         out.append(f"| `{t['id']}` | {ICON[t['verdict']]} {LABEL[t['verdict']]}{weak} | {sel_s} | {rules_s} | {_money(t['cost_delta_usd'])} |")
     out.append("")
 
     for t in cmp["tasks"]:
-        if t["verdict"] in ("unchanged", "improved") and not t.get("weak_signal"):
+        if t["verdict"] in ("unchanged", "improved") and not t.get("weak_signal") and not t.get("incomplete"):
             continue
         opened = "" if t.get("weak_signal") else " open"
         label = LABEL[t["verdict"]] + (", but something got worse by less than the threshold" if t.get("weak_signal") else "")
@@ -105,18 +111,22 @@ def to_markdown(cmp: dict, max_evidence_chars: int = 900) -> str:
         out.append("")
         out.append(f"> {t['prompt'][:300]}")
         out.append("")
+        if t.get("incomplete"):
+            out.append(f"**Incomplete:** valid runs before {t['before']['valid']}/{m['repeats']}, "
+                       f"after {t['after']['valid']}/{m['repeats']}. Rates below exclude failed runs.")
+            out.append("")
         if t["selection"]:
             s = t["selection"]
             out.append(f"**First skill opened** (expected `{s['expected']}`): before "
                        + ", ".join(f"{_skill(k)} {v}×" for k, v in t["before"]["first_skill"].items())
                        + " · after " + ", ".join(f"{_skill(k)} {v}×" for k, v in t["after"]["first_skill"].items())
-                       + (f" · confidence **{s['confidence']}** (p={s['p']:.3f})" if s["p"] is not None else ""))
+                       + (f" · drop {s['drop_pp']:g} pp (raw p={s['p']:.3f}, Holm p={s['p_adjusted']:.3f})" if s["p"] is not None else ""))
             out.append("")
         if t["rules"]:
             out.append("| Rule | Before | After | Change |")
             out.append("|---|---|---|---|")
             for r in t["rules"]:
-                ch = {"regressed": f"🔴 broken · confidence {r['confidence']} (p={r['p']:.3f})" if r["p"] is not None else "🔴 broken",
+                ch = {"regressed": f"🔴 observed drop {r['drop_pp']:g} pp (raw p={r['p']:.3f}, Holm p={r['p_adjusted']:.3f})" if r["p"] is not None else "🔴 broken",
                       "improved": "🟢 better", "weaker": "↘ lower, below threshold", "unchanged": ""}[r["status"]]
                 desc = f" – {r['description']}" if r["description"] else ""
                 out.append(f"| `{r['id']}`{desc} | {_frac(r['before'])} | {_frac(r['after'])} | {ch} |")
@@ -152,7 +162,8 @@ def to_markdown(cmp: dict, max_evidence_chars: int = 900) -> str:
     out.append(f"<sub>{m['repeats']} repeats per arm, runs interleaved · model `{m.get('model') or 'default'}` · "
                f"Claude Code {m.get('agent_version') or '?'} · skilldiff {m['skilldiff_version']} · "
                f"rule broken = pass rate dropped by ≥{int(m['thresholds']['min_drop'] * 100)} points; "
-               f"p = one-sided Fisher exact test</sub>")
+               f"p = one-sided Fisher exact test; Holm adjustment across {cmp['statistics']['comparisons']} comparisons. "
+               f"Threshold flags describe observed drops, not statistical certainty; small samples need more repeats.</sub>")
     return "\n".join(out) + "\n"
 
 
@@ -259,7 +270,7 @@ def to_html(cmp: dict, records: list[dict]) -> str:
         rows.append(
             f'<tr><td><a href="#t-{_e(t["id"])}"><code>{_e(t["id"])}</code></a></td>'
             f'<td><span class="pill {t["verdict"]}">{_e(LABEL[t["verdict"]])}</span>'
-            f'{WEAK_MARK if t.get("weak_signal") else ""}</td>'
+            f'{WEAK_MARK if t.get("weak_signal") else ""}{" · incomplete" if t.get("incomplete") else ""}</td>'
             f'<td>{_e(_frac(sel["before"]) + " → " + _frac(sel["after"])) if sel else "–"}</td>'
             f'<td>{_bar(rb, nb)}<span class="mono">{rb}/{nb}</span></td><td>{_bar(ra, na, True)}<span class="mono">{ra}/{na}</span></td>'
             f'<td class="mono">{_e(_money(t["cost_delta_usd"]))}</td></tr>')
@@ -267,17 +278,23 @@ def to_html(cmp: dict, records: list[dict]) -> str:
     for t in cmp["tasks"]:
         rule_rows = []
         for r in t["rules"]:
-            label = {"regressed": f'<span class="pill regressed">broken · {r["confidence"]} (p={r["p"]:.3f})</span>' if r["p"] is not None else '<span class="pill regressed">broken</span>',
+            label = {"regressed": f'<span class="pill regressed">drop {r["drop_pp"]:g} pp · raw p={r["p"]:.3f}, Holm p={r["p_adjusted"]:.3f}</span>' if r["p"] is not None else '<span class="pill regressed">broken</span>',
                      "improved": '<span class="pill improved">better</span>', "weaker": '<span class="pill unchanged">lower, below threshold</span>', "unchanged": ""}[r["status"]]
             ev = "".join(_evidence_html(x) for x in r["evidence"])
             rule_rows.append(f'<tr><td><code>{_e(r["id"])}</code><div style="color:var(--muted);font-size:13px">{_e(r["description"] or r["type"])}</div>{ev}</td>'
                              f'<td class="mono">{_frac(r["before"])}</td><td class="mono">{_frac(r["after"])}</td><td>{label}</td></tr>')
         sel_html = ""
         if t["selection"]:
+            s = t["selection"]
             fb = ", ".join(f"{_e(k)} ×{v}" for k, v in t["before"]["first_skill"].items())
             fa = ", ".join(f"{_e(k)} ×{v}" for k, v in t["after"]["first_skill"].items())
             sel_html = (f'<p><b>First skill opened</b> (expected <code>{_e(t["expect_skill"])}</code>)<br>'
-                        f'before: <span class="mono">{fb or "–"}</span><br>after: <span class="mono">{fa or "–"}</span></p>')
+                        f'before: <span class="mono">{fb or "–"}</span><br>after: <span class="mono">{fa or "–"}</span>'
+                        + (f'<br>Observed drop {s["drop_pp"]:g} pp · raw p={s["p"]:.3f}, Holm p={s["p_adjusted"]:.3f}'
+                           if s["p"] is not None else "") + '</p>')
+        if t.get("incomplete"):
+            sel_html += (f'<p><b>Incomplete:</b> valid runs before {t["before"]["valid"]}/{m["repeats"]}, '
+                         f'after {t["after"]["valid"]}/{m["repeats"]}. Rates exclude failed runs.</p>')
         moved = [a for a in t["artifacts"] if a["before"] != a["after"]]
         art = ""
         if moved:
@@ -298,10 +315,11 @@ def to_html(cmp: dict, records: list[dict]) -> str:
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>skilldiff report</title><style>{_CSS}</style></head><body><main>
 <h1>skilldiff report</h1><p class="head">{head_html}</p>
+<p class="sub">Privacy: reports, transcripts, and file artifacts are not redacted. Review before sharing.</p>
 <p class="sub">{m['repeats']} repeats per arm · model {_e(m.get('model') or 'default')} · Claude Code {_e(m.get('agent_version') or '?')} · {_e(m.get('finished_at', ''))}</p>
 {"".join(f'<p class="sub">⚠️ {_e(w)}</p>' for w in cmp.get("warnings", []))}<div class="stats">{"".join(f'<div class="stat"><b>{_e(v)}</b><span>{_e(k)}</span></div>' for v, k in stats)}</div>
 <div class="wrap"><table><tr><th>Workflow</th><th>Result</th><th>Expected skill first</th><th>Rules before</th><th>Rules after</th><th>Cost/run Δ</th></tr>{"".join(rows)}</table></div>
 {"".join(sections)}
 <footer>Before: {_e(", ".join(m["skills"]["before"]))}<br>After: {_e(", ".join(m["skills"]["after"]))}<br>
-A rule counts as broken when its pass rate drops by at least {int(m['thresholds']['min_drop'] * 100)} percentage points. p is a one-sided Fisher exact test; with 3 repeats the smallest possible p is 0.05, so run more repeats for stronger evidence.
+A rule counts as broken when its pass rate drops by at least {int(m['thresholds']['min_drop'] * 100)} percentage points. p is a one-sided Fisher exact test; Holm adjustment covers all {cmp['statistics']['comparisons']} comparable rule and skill-selection tests. Threshold flags describe observed drops, not statistical certainty. Small samples need more repeats.
 Generated by skilldiff {_e(m['skilldiff_version'])}.</footer></main></body></html>"""

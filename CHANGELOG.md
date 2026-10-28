@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Return exit code 2 for failed or missing runs; report incomplete experiments prominently and fail CI by default.
+- Replace confidence labels with observed drops, raw p-values, and Holm adjustment across all comparable rules and skill selections.
+- Clarify that temporary workspaces are not a sandbox and saved outputs are not redacted; warn before execution.
+- Make raw transcript/file artifact uploads opt-in; report artifacts and comments still require privacy review.
+
 ## [0.1.0] - 2026-10-28
 
 First release.

@@ -30,6 +30,9 @@ inputs:
   comment:
     description: "Post or update a sticky pull request comment with the report."
     default: "true"
+  upload-raw:
+    description: "Upload unredacted transcripts and file snapshots. Review their contents before enabling."
+    default: "false"
   claude-code-version:
     description: "npm version of @anthropic-ai/claude-code to install."
     default: "latest"
@@ -38,6 +41,9 @@ inputs:
     default: ${{ github.token }}
 
 outputs:
+  inconclusive:
+    description: "'true' when any task has failed or missing runs."
+    value: ${{ steps.run.outputs.inconclusive }}
   regression:
     description: "'true' when at least one workflow regressed."
     value: ${{ steps.run.outputs.regression }}
@@ -57,8 +63,10 @@ runs:
 
     - name: Install Claude Code and skilldiff
       shell: bash
+      env:
+        CLAUDE_VERSION: ${{ inputs.claude-code-version }}
       run: |
-        npm install -g "@anthropic-ai/claude-code@${{ inputs.claude-code-version }}"
+        npm install -g "@anthropic-ai/claude-code@$CLAUDE_VERSION"
         python -m pip install --quiet "${{ github.action_path }}"
         claude --version
         skilldiff --version
@@ -85,12 +93,15 @@ runs:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         BEFORE: ${{ steps.base.outputs.before }}
         AFTER: ${{ steps.base.outputs.after }}
+        CONFIG: ${{ inputs.config }}
+        REPEATS: ${{ inputs.repeats }}
+        MODEL: ${{ inputs.model }}
       run: |
         OUT="$RUNNER_TEMP/skilldiff-out"
-        ARGS=(run -c "${{ inputs.config }}" -o "$OUT" --force --fail-on never)
+        ARGS=(run -c "$CONFIG" -o "$OUT" --force --fail-on never)
         if [ -n "$BEFORE" ]; then ARGS+=(--before-skills "$BEFORE" --after-skills "$AFTER"); fi
-        if [ -n "${{ inputs.repeats }}" ]; then ARGS+=(--repeats "${{ inputs.repeats }}"); fi
-        if [ -n "${{ inputs.model }}" ]; then ARGS+=(--model "${{ inputs.model }}"); fi
+        if [ -n "$REPEATS" ]; then ARGS+=(--repeats "$REPEATS"); fi
+        if [ -n "$MODEL" ]; then ARGS+=(--model "$MODEL"); fi
         skilldiff "${ARGS[@]}"
         echo "report-dir=$OUT" >> "$GITHUB_OUTPUT"
         python - "$OUT/report.json" >> "$GITHUB_OUTPUT" <<'PY'
@@ -98,17 +109,28 @@ runs:
         from skilldiff.report import headline
         r = json.load(open(sys.argv[1]))
         print(f"regression={'true' if r['regression'] else 'false'}")
+        print(f"inconclusive={'true' if r['inconclusive'] else 'false'}")
         print(f"substitution={'true' if r['substitution'] or r['counts'].get('less-reliable') else 'false'}")
         print(f"headline={headline(r)}")
         PY
         cat "$OUT/report.md" >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Upload report and raw runs
+    - name: Upload reports (unredacted; may contain sensitive evidence)
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: skilldiff-report
-        path: ${{ runner.temp }}/skilldiff-out
+        path: ${{ runner.temp }}/skilldiff-out/report.*
+        if-no-files-found: ignore
+
+    - name: Upload unredacted raw runs (opt-in)
+      if: ${{ always() && inputs.upload-raw == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: skilldiff-raw-runs
+        path: |
+          ${{ runner.temp }}/skilldiff-out/runs
+          ${{ runner.temp }}/skilldiff-out/meta.json
         if-no-files-found: ignore
 
     - name: Post sticky comment
@@ -122,7 +144,7 @@ runs:
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
         BODY_FILE="$RUNNER_TEMP/skilldiff-comment.md"
-        { cat "$REPORT"; echo; echo "<sub>Full HTML report and transcripts: [workflow run artifacts]($RUN_URL)</sub>"; } > "$BODY_FILE"
+        { cat "$REPORT"; echo; echo "<sub>HTML report: [workflow run artifacts]($RUN_URL). Raw transcripts are uploaded only when upload-raw is enabled.</sub>"; } > "$BODY_FILE"
         # GitHub comments are limited to 65536 characters
         python -c "import sys;p=sys.argv[1];t=open(p).read();open(p,'w').write(t if len(t)<65000 else t[:64000]+'\n\n… (truncated; see the artifact)\n')" "$BODY_FILE"
         EXISTING=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
@@ -133,11 +155,13 @@ runs:
           gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@"$BODY_FILE" > /dev/null
         fi
 
-    - name: Fail on regression
-      if: ${{ (inputs.fail-on == 'regression' && steps.run.outputs.regression == 'true') || (inputs.fail-on == 'substitution' && (steps.run.outputs.regression == 'true' || steps.run.outputs.substitution == 'true')) }}
+    - name: Fail on incomplete experiment or configured findings
+      if: ${{ (inputs.fail-on != 'never' && steps.run.outputs.inconclusive == 'true') || (inputs.fail-on == 'regression' && steps.run.outputs.regression == 'true') || (inputs.fail-on == 'substitution' && (steps.run.outputs.regression == 'true' || steps.run.outputs.substitution == 'true')) }}
       shell: bash
       env:
         HEADLINE: ${{ steps.run.outputs.headline }}
+        INCONCLUSIVE: ${{ steps.run.outputs.inconclusive }}
       run: |
         echo "::error::$HEADLINE"
+        if [ "$INCONCLUSIVE" = "true" ]; then exit 2; fi
         exit 1

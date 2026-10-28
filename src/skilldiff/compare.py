@@ -5,7 +5,7 @@ from collections import Counter
 from math import fsum
 from statistics import mean
 
-from .stats import confidence, fisher_one_sided, rate
+from .stats import fisher_one_sided, holm_adjust, rate
 
 VERDICT_ORDER = ["regressed", "substituted", "less-reliable", "improved", "unchanged", "no-data"]
 
@@ -88,6 +88,8 @@ def compare(meta: dict, records: list[dict]) -> dict:
     new_skills = sorted(set(meta["skills"]["after"]) - set(meta["skills"]["before"]))
     removed_skills = sorted(set(meta["skills"]["before"]) - set(meta["skills"]["after"]))
     tasks_out = []
+    tests = []
+    p_values = []
     for task in meta["tasks"]:
         tid = task["id"]
         b_recs = [r for r in records if r["task"] == tid and r["arm"] == "before"]
@@ -99,11 +101,15 @@ def compare(meta: dict, records: list[dict]) -> dict:
             rb, ra = b["rules"][rule["id"]], a["rules"][rule["id"]]
             pb, pa = rate(rb["pass"], rb["n"]), rate(ra["pass"], ra["n"])
             row = {"id": rule["id"], "type": rule["type"], "description": rule.get("description", ""),
-                   "before": rb, "after": ra, "status": "unchanged", "p": None, "confidence": None, "evidence": []}
+                   "before": rb, "after": ra, "status": "unchanged", "p": None, "p_adjusted": None,
+                   "drop_pp": None, "evidence": []}
             if pb is not None and pa is not None:
+                p = fisher_one_sided(rb["pass"], rb["n"], ra["pass"], ra["n"])
+                row.update(p=_r(p), drop_pp=_r(100 * (pb - pa)))
+                tests.append(row)
+                p_values.append(p)
                 if pb - pa >= th["min_drop"] - 1e-9:
-                    p = fisher_one_sided(rb["pass"], rb["n"], ra["pass"], ra["n"])
-                    row.update(status="regressed", p=_r(p), confidence=confidence(p), evidence=_evidence(a_recs, rule["id"]))
+                    row.update(status="regressed", evidence=_evidence(a_recs, rule["id"]))
                 elif pa - pb >= th["min_drop"] - 1e-9:
                     row["status"] = "improved"
                 elif pb > pa:
@@ -118,10 +124,14 @@ def compare(meta: dict, records: list[dict]) -> dict:
             takers = {s: c for s, c in a["first_skill"].items() if s != task["expect_skill"]}
             selection = {"expected": task["expect_skill"], "before": {"pass": eb, "n": b["valid"]},
                          "after": {"pass": ea, "n": a["valid"]}, "taken_by": takers, "status": "unchanged",
-                         "p": None, "confidence": None}
-            if rb_ is not None and ra_ is not None and rb_ - ra_ >= th["selection_min_drop"] - 1e-9:
+                         "p": None, "p_adjusted": None, "drop_pp": None}
+            if rb_ is not None and ra_ is not None:
                 p = fisher_one_sided(eb, b["valid"], ea, a["valid"])
-                selection.update(status="changed", p=_r(p), confidence=confidence(p))
+                selection.update(p=_r(p), drop_pp=_r(100 * (rb_ - ra_)))
+                tests.append(selection)
+                p_values.append(p)
+            if rb_ is not None and ra_ is not None and rb_ - ra_ >= th["selection_min_drop"] - 1e-9:
+                selection.update(status="changed")
             elif rb_ is not None and ra_ is not None and rb_ > ra_:
                 selection["status"] = "weaker"
 
@@ -144,11 +154,14 @@ def compare(meta: dict, records: list[dict]) -> dict:
                      for f in all_files]
         tasks_out.append({
             "id": tid, "prompt": task["prompt"], "expect_skill": task.get("expect_skill"), "verdict": verdict,
+            "incomplete": any(arm["errors"] or arm["valid"] != meta["repeats"] for arm in (b, a)),
             "weak_signal": weak and verdict in ("unchanged", "improved"),
             "before": b, "after": a, "rules": rule_rows, "selection": selection, "artifacts": artifacts,
             "cost_delta_usd": _r(a["cost_usd"] - b["cost_usd"]) if (a["cost_usd"] is not None and b["cost_usd"] is not None) else None,
         })
 
+    for test, adjusted in zip(tests, holm_adjust(p_values)):
+        test["p_adjusted"] = _r(adjusted)
     counts = Counter(t["verdict"] for t in tasks_out)
     totals = {arm: _r(fsum(t[arm]["cost_usd_total"] for t in tasks_out)) for arm in ("before", "after")}
     broken_rules = sum(1 for t in tasks_out for r in t["rules"] if r["status"] == "regressed")
@@ -161,6 +174,9 @@ def compare(meta: dict, records: list[dict]) -> dict:
         "broken_rules": broken_rules,
         "cost_total_usd": totals,
         "warnings": meta.get("warnings", []),
+        "inconclusive": any(t["incomplete"] for t in tasks_out),
+        "statistics": {"method": "one-sided Fisher exact", "adjustment": "Holm",
+                       "comparisons": len(tests), "family": "all comparable task rules and expected-skill selections"},
         "regression": counts.get("regressed", 0) > 0,
         "substitution": counts.get("substituted", 0) > 0,
     }

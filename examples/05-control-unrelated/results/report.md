@@ -1,7 +1,9 @@
 <!-- skilldiff-report -->
 ## skilldiff: will this skill break my setup?
 
-**✅ Adding `sql-style` caused no detected regressions across 5 workflows.**
+**✅ Adding `sql-style` showed no detected regressions across 5 workflows.**
+
+> Privacy: reports, transcripts, and file artifacts are not redacted. Review before sharing.
 
 | Workflow | Result | Expected skill ran first | Rules followed | Cost / run |
 |---|---|---|---|---|
@@ -13,4 +15,4 @@
 
 **Cost of this experiment:** $2.83 (before $1.41, after $1.41). Cost / run columns compare mean API cost per run.
 
-<sub>5 repeats per arm, runs interleaved · model `claude-sonnet-5-5` · Claude Code 2.1.312 · skilldiff 0.1.0 · rule broken = pass rate dropped by ≥50 points; p = one-sided Fisher exact test</sub>
+<sub>5 repeats per arm, runs interleaved · model `claude-sonnet-5-5` · Claude Code 2.1.312 · skilldiff 0.1.0 · rule broken = pass rate dropped by ≥50 points; p = one-sided Fisher exact test; Holm adjustment across 27 comparisons. Threshold flags describe observed drops, not statistical certainty; small samples need more repeats.</sub>

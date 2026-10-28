@@ -1,7 +1,9 @@
 <!-- skilldiff-report -->
 ## skilldiff: will this skill break my setup?
 
-**✅ Adding `quick-review` caused no detected regressions across 5 workflows. 1 got worse by less than the threshold; re-run with more repeats to be sure.**
+**✅ Adding `quick-review` showed no detected regressions across 5 workflows. 1 got worse by less than the threshold; re-run with more repeats to be sure.**
+
+> Privacy: reports, transcripts, and file artifacts are not redacted. Review before sharing.
 
 | Workflow | Result | Expected skill ran first | Rules followed | Cost / run |
 |---|---|---|---|---|
@@ -15,7 +17,7 @@
 
 > Can you review shop/payments.py before I merge it?
 
-**First skill opened** (expected `pr-review-checklist`): before `pr-review-checklist` 4×, no skill 1× · after no skill 3×, `pr-review-checklist` 2×
+**First skill opened** (expected `pr-review-checklist`): before `pr-review-checklist` 4×, no skill 1× · after no skill 3×, `pr-review-checklist` 2× · drop 40 pp (raw p=0.262, Holm p=1.000)
 
 | Rule | Before | After | Change |
 |---|---|---|---|
@@ -31,4 +33,4 @@
 
 **Cost of this experiment:** $0.23 (before $0.12, after $0.11). Cost / run columns compare mean API cost per run.
 
-<sub>5 repeats per arm, runs interleaved · model `claude-haiku-5-5` · Claude Code 2.1.312 · skilldiff 0.1.0 · rule broken = pass rate dropped by ≥50 points; p = one-sided Fisher exact test</sub>
+<sub>5 repeats per arm, runs interleaved · model `claude-haiku-5-5` · Claude Code 2.1.312 · skilldiff 0.1.0 · rule broken = pass rate dropped by ≥50 points; p = one-sided Fisher exact test; Holm adjustment across 27 comparisons. Threshold flags describe observed drops, not statistical certainty; small samples need more repeats.</sub>
