@@ -255,9 +255,9 @@
         "files_changed": {
           "CHANGELOG.md": 5
         },
-        "cost_usd": 0.004414232000000001,
-        "cost_usd_total": 0.02207116,
-        "duration_s": 15.9746,
+        "cost_usd": 0.004414,
+        "cost_usd_total": 0.022071,
+        "duration_s": 15.975,
         "turns": 7.2,
         "input_tokens": 212203.6,
         "output_tokens": 1197.6
@@ -300,9 +300,9 @@
         "files_changed": {
           "CHANGELOG.md": 5
         },
-        "cost_usd": 0.004534092,
-        "cost_usd_total": 0.02267046,
-        "duration_s": 16.174799999999998,
+        "cost_usd": 0.004534,
+        "cost_usd_total": 0.02267,
+        "duration_s": 16.175,
         "turns": 8.4,
         "input_tokens": 198240,
         "output_tokens": 1531.6
@@ -321,7 +321,7 @@
             "n": 5
           },
           "status": "regressed",
-          "p": 0.08333333333333333,
+          "p": 0.083333,
           "confidence": "medium",
           "evidence": [
             {
@@ -431,7 +431,7 @@
           "after": 5
         }
       ],
-      "cost_delta_usd": 0.00011985999999999941
+      "cost_delta_usd": 0.00012
     },
     {
       "id": "docs-payments",
@@ -472,9 +472,9 @@
         "files_changed": {
           "README.md": 5
         },
-        "cost_usd": 0.0059439720000000005,
-        "cost_usd_total": 0.02971986,
-        "duration_s": 23.9408,
+        "cost_usd": 0.005944,
+        "cost_usd_total": 0.02972,
+        "duration_s": 23.941,
         "turns": 8.4,
         "input_tokens": 295235.4,
         "output_tokens": 2188.6
@@ -515,9 +515,9 @@
           "README.md": 5,
           "docs/payments.md": 1
         },
-        "cost_usd": 0.0056318,
-        "cost_usd_total": 0.028159000000000003,
-        "duration_s": 21.939400000000003,
+        "cost_usd": 0.005632,
+        "cost_usd_total": 0.028159,
+        "duration_s": 21.939,
         "turns": 10.6,
         "input_tokens": 242598.4,
         "output_tokens": 2425
@@ -606,7 +606,7 @@
           "team-conventions": 3
         },
         "status": "changed",
-        "p": 0.08333333333333333,
+        "p": 0.083333,
         "confidence": "medium"
       },
       "artifacts": [
@@ -621,7 +621,7 @@
           "after": 1
         }
       ],
-      "cost_delta_usd": -0.0003121720000000003
+      "cost_delta_usd": -0.000312
     },
     {
       "id": "review-payments",
@@ -663,9 +663,9 @@
         "files_changed": {
           "REVIEW.md": 2
         },
-        "cost_usd": 0.004225622,
-        "cost_usd_total": 0.02112811,
-        "duration_s": 18.2382,
+        "cost_usd": 0.004226,
+        "cost_usd_total": 0.021128,
+        "duration_s": 18.238,
         "turns": 4.6,
         "input_tokens": 149586.2,
         "output_tokens": 2096.4
@@ -705,9 +705,9 @@
         "files_changed": {
           "REVIEW.md": 5
         },
-        "cost_usd": 0.004979136,
-        "cost_usd_total": 0.02489568,
-        "duration_s": 21.0228,
+        "cost_usd": 0.004979,
+        "cost_usd_total": 0.024896,
+        "duration_s": 21.023,
         "turns": 8.2,
         "input_tokens": 176494.4,
         "output_tokens": 2483.8
@@ -806,7 +806,7 @@
           "after": 5
         }
       ],
-      "cost_delta_usd": 0.0007535140000000003
+      "cost_delta_usd": 0.000753
     },
     {
       "id": "security-config",
@@ -847,9 +847,9 @@
           }
         },
         "files_changed": {},
-        "cost_usd": 0.002799208,
-        "cost_usd_total": 0.013996040000000001,
-        "duration_s": 11.234200000000001,
+        "cost_usd": 0.002799,
+        "cost_usd_total": 0.013996,
+        "duration_s": 11.234,
         "turns": 2,
         "input_tokens": 77049.2,
         "output_tokens": 1286.8
@@ -895,9 +895,9 @@
           "SECURITY_FINDINGS.md": 1,
           "shop/config.py": 1
         },
-        "cost_usd": 0.0032864260000000003,
-        "cost_usd_total": 0.01643213,
-        "duration_s": 13.188600000000001,
+        "cost_usd": 0.003286,
+        "cost_usd_total": 0.016432,
+        "duration_s": 13.189,
         "turns": 3.6,
         "input_tokens": 101578.4,
         "output_tokens": 1480.8
@@ -1019,7 +1019,7 @@
           "after": 1
         }
       ],
-      "cost_delta_usd": 0.0004872180000000002
+      "cost_delta_usd": 0.000487
     },
     {
       "id": "tests-payments",
@@ -1060,9 +1060,9 @@
         "files_changed": {
           "tests/test_payments.py": 5
         },
-        "cost_usd": 0.004988004,
-        "cost_usd_total": 0.02494002,
-        "duration_s": 20.3436,
+        "cost_usd": 0.004988,
+        "cost_usd_total": 0.02494,
+        "duration_s": 20.344,
         "turns": 6.8,
         "input_tokens": 184341.6,
         "output_tokens": 2322.8
@@ -1100,8 +1100,8 @@
         "files_changed": {
           "tests/test_payments.py": 5
         },
-        "cost_usd": 0.004876036,
-        "cost_usd_total": 0.02438018,
+        "cost_usd": 0.004876,
+        "cost_usd_total": 0.02438,
         "duration_s": 19.186,
         "turns": 7.2,
         "input_tokens": 161250.2,
@@ -1199,7 +1199,7 @@
           "after": 5
         }
       ],
-      "cost_delta_usd": -0.00011196799999999962
+      "cost_delta_usd": -0.000112
     }
   ],
   "counts": {
@@ -1210,8 +1210,8 @@
   },
   "broken_rules": 1,
   "cost_total_usd": {
-    "before": 0.11185519,
-    "after": 0.11653745
+    "before": 0.111855,
+    "after": 0.116537
   },
   "warnings": [],
   "regression": true,

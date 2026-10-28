@@ -258,9 +258,9 @@
         "files_changed": {
           "SECURITY_FINDINGS.md": 5
         },
-        "cost_usd": 0.04907728,
-        "cost_usd_total": 0.2453864,
-        "duration_s": 16.8538,
+        "cost_usd": 0.049077,
+        "cost_usd_total": 0.245386,
+        "duration_s": 16.854,
         "turns": 5,
         "input_tokens": 144679.2,
         "output_tokens": 619.4
@@ -306,9 +306,9 @@
           "shop/config.py": 3,
           "SECURITY_FINDINGS.md": 2
         },
-        "cost_usd": 0.05999232,
-        "cost_usd_total": 0.2999616,
-        "duration_s": 28.1386,
+        "cost_usd": 0.059992,
+        "cost_usd_total": 0.299962,
+        "duration_s": 28.139,
         "turns": 5.6,
         "input_tokens": 153312.8,
         "output_tokens": 1366
@@ -327,7 +327,7 @@
             "n": 5
           },
           "status": "regressed",
-          "p": 0.08333333333333333,
+          "p": 0.083333,
           "confidence": "medium",
           "evidence": [
             {
@@ -359,7 +359,7 @@
             "n": 5
           },
           "status": "regressed",
-          "p": 0.08333333333333333,
+          "p": 0.083333,
           "confidence": "medium",
           "evidence": [
             {
@@ -384,7 +384,7 @@
             "n": 5
           },
           "status": "regressed",
-          "p": 0.08333333333333333,
+          "p": 0.083333,
           "confidence": "medium",
           "evidence": [
             {
@@ -445,7 +445,7 @@
           "security-audit-oss": 3
         },
         "status": "changed",
-        "p": 0.08333333333333333,
+        "p": 0.083333,
         "confidence": "medium"
       },
       "artifacts": [
@@ -465,7 +465,7 @@
           "after": 3
         }
       ],
-      "cost_delta_usd": 0.01091504
+      "cost_delta_usd": 0.010915
     },
     {
       "id": "review-payments",
@@ -506,9 +506,9 @@
         "files_changed": {
           "REVIEW.md": 5
         },
-        "cost_usd": 0.05770422,
-        "cost_usd_total": 0.28852110000000003,
-        "duration_s": 22.3032,
+        "cost_usd": 0.057704,
+        "cost_usd_total": 0.288521,
+        "duration_s": 22.303,
         "turns": 5.8,
         "input_tokens": 153472.4,
         "output_tokens": 1079.6
@@ -546,9 +546,9 @@
         "files_changed": {
           "REVIEW.md": 5
         },
-        "cost_usd": 0.05829516,
-        "cost_usd_total": 0.2914758,
-        "duration_s": 22.3372,
+        "cost_usd": 0.058295,
+        "cost_usd_total": 0.291476,
+        "duration_s": 22.337,
         "turns": 6,
         "input_tokens": 153734.8,
         "output_tokens": 1107.6
@@ -645,7 +645,7 @@
           "after": 5
         }
       ],
-      "cost_delta_usd": 0.0005909399999999981
+      "cost_delta_usd": 0.000591
     },
     {
       "id": "commit-discount",
@@ -690,9 +690,9 @@
         "files_changed": {
           "CHANGELOG.md": 5
         },
-        "cost_usd": 0.05592172,
-        "cost_usd_total": 0.27960860000000004,
-        "duration_s": 24.3702,
+        "cost_usd": 0.055922,
+        "cost_usd_total": 0.279609,
+        "duration_s": 24.37,
         "turns": 6.2,
         "input_tokens": 198845.2,
         "output_tokens": 602
@@ -734,9 +734,9 @@
         "files_changed": {
           "CHANGELOG.md": 5
         },
-        "cost_usd": 0.05529204,
-        "cost_usd_total": 0.2764602,
-        "duration_s": 25.0426,
+        "cost_usd": 0.055292,
+        "cost_usd_total": 0.27646,
+        "duration_s": 25.043,
         "turns": 6,
         "input_tokens": 191239.6,
         "output_tokens": 635.6
@@ -850,7 +850,7 @@
           "after": 5
         }
       ],
-      "cost_delta_usd": -0.0006296800000000005
+      "cost_delta_usd": -0.00063
     },
     {
       "id": "tests-payments",
@@ -891,9 +891,9 @@
         "files_changed": {
           "tests/test_payments.py": 5
         },
-        "cost_usd": 0.062042440000000004,
-        "cost_usd_total": 0.31021220000000005,
-        "duration_s": 28.677799999999998,
+        "cost_usd": 0.062042,
+        "cost_usd_total": 0.310212,
+        "duration_s": 28.678,
         "turns": 6.8,
         "input_tokens": 153373.4,
         "output_tokens": 1453.2
@@ -931,9 +931,9 @@
         "files_changed": {
           "tests/test_payments.py": 5
         },
-        "cost_usd": 0.060147540000000006,
-        "cost_usd_total": 0.3007377,
-        "duration_s": 26.8376,
+        "cost_usd": 0.060148,
+        "cost_usd_total": 0.300738,
+        "duration_s": 26.838,
         "turns": 6.4,
         "input_tokens": 153498.8,
         "output_tokens": 1313
@@ -1030,7 +1030,7 @@
           "after": 5
         }
       ],
-      "cost_delta_usd": -0.001894899999999998
+      "cost_delta_usd": -0.001894
     },
     {
       "id": "docs-payments",
@@ -1071,9 +1071,9 @@
         "files_changed": {
           "README.md": 5
         },
-        "cost_usd": 0.0589886,
+        "cost_usd": 0.058989,
         "cost_usd_total": 0.294943,
-        "duration_s": 23.398799999999998,
+        "duration_s": 23.399,
         "turns": 6,
         "input_tokens": 191109,
         "output_tokens": 942.2
@@ -1111,9 +1111,9 @@
         "files_changed": {
           "README.md": 5
         },
-        "cost_usd": 0.059536660000000005,
-        "cost_usd_total": 0.29768330000000004,
-        "duration_s": 24.1204,
+        "cost_usd": 0.059537,
+        "cost_usd_total": 0.297683,
+        "duration_s": 24.12,
         "turns": 6,
         "input_tokens": 191296.6,
         "output_tokens": 978
@@ -1210,7 +1210,7 @@
           "after": 5
         }
       ],
-      "cost_delta_usd": 0.000548060000000003
+      "cost_delta_usd": 0.000548
     }
   ],
   "counts": {
@@ -1219,8 +1219,8 @@
   },
   "broken_rules": 3,
   "cost_total_usd": {
-    "before": 1.4186713000000002,
-    "after": 1.4663186000000001
+    "before": 1.418671,
+    "after": 1.466319
   },
   "warnings": [
     "folder 'security-audit-oss' declares name 'security-audit'; Claude Code lists and invokes it as 'security-audit-oss'",

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from math import fsum
 from statistics import mean
 
 from .stats import confidence, fisher_one_sided, rate
@@ -14,9 +15,15 @@ def _ranked(c: Counter) -> dict:
     return dict(sorted(c.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
-def _mean(xs):
+def _r(x, nd=6):
+    """Fixed precision so reports are identical across Python versions
+    (3.12 changed float summation in sum())."""
+    return None if x is None else round(x, nd)
+
+
+def _mean(xs, nd=6):
     xs = [x for x in xs if x is not None]
-    return mean(xs) if xs else None
+    return _r(mean(xs), nd) if xs else None
 
 
 def _arm_summary(recs: list[dict], task: dict) -> dict:
@@ -51,11 +58,11 @@ def _arm_summary(recs: list[dict], task: dict) -> dict:
         "rules": rules,
         "files_changed": _ranked(files),
         "cost_usd": _mean([r["transcript"].get("cost_usd") for r in valid]),
-        "cost_usd_total": sum(r["transcript"].get("cost_usd") or 0 for r in recs),
-        "duration_s": (_mean([r["transcript"].get("duration_ms") for r in valid]) or 0) / 1000 or None,
-        "turns": _mean([r["transcript"].get("num_turns") for r in valid]),
-        "input_tokens": _mean([r["transcript"].get("input_tokens") for r in valid]),
-        "output_tokens": _mean([r["transcript"].get("output_tokens") for r in valid]),
+        "cost_usd_total": _r(fsum(r["transcript"].get("cost_usd") or 0 for r in recs)),
+        "duration_s": _r((_mean([r["transcript"].get("duration_ms") for r in valid]) or 0) / 1000, 3) or None,
+        "turns": _mean([r["transcript"].get("num_turns") for r in valid], 2),
+        "input_tokens": _mean([r["transcript"].get("input_tokens") for r in valid], 1),
+        "output_tokens": _mean([r["transcript"].get("output_tokens") for r in valid], 1),
     }
 
 
@@ -96,7 +103,7 @@ def compare(meta: dict, records: list[dict]) -> dict:
             if pb is not None and pa is not None:
                 if pb - pa >= th["min_drop"] - 1e-9:
                     p = fisher_one_sided(rb["pass"], rb["n"], ra["pass"], ra["n"])
-                    row.update(status="regressed", p=p, confidence=confidence(p), evidence=_evidence(a_recs, rule["id"]))
+                    row.update(status="regressed", p=_r(p), confidence=confidence(p), evidence=_evidence(a_recs, rule["id"]))
                 elif pa - pb >= th["min_drop"] - 1e-9:
                     row["status"] = "improved"
                 elif pb > pa:
@@ -114,7 +121,7 @@ def compare(meta: dict, records: list[dict]) -> dict:
                          "p": None, "confidence": None}
             if rb_ is not None and ra_ is not None and rb_ - ra_ >= th["selection_min_drop"] - 1e-9:
                 p = fisher_one_sided(eb, b["valid"], ea, a["valid"])
-                selection.update(status="changed", p=p, confidence=confidence(p))
+                selection.update(status="changed", p=_r(p), confidence=confidence(p))
             elif rb_ is not None and ra_ is not None and rb_ > ra_:
                 selection["status"] = "weaker"
 
@@ -139,11 +146,11 @@ def compare(meta: dict, records: list[dict]) -> dict:
             "id": tid, "prompt": task["prompt"], "expect_skill": task.get("expect_skill"), "verdict": verdict,
             "weak_signal": weak and verdict in ("unchanged", "improved"),
             "before": b, "after": a, "rules": rule_rows, "selection": selection, "artifacts": artifacts,
-            "cost_delta_usd": (a["cost_usd"] - b["cost_usd"]) if (a["cost_usd"] is not None and b["cost_usd"] is not None) else None,
+            "cost_delta_usd": _r(a["cost_usd"] - b["cost_usd"]) if (a["cost_usd"] is not None and b["cost_usd"] is not None) else None,
         })
 
     counts = Counter(t["verdict"] for t in tasks_out)
-    totals = {arm: sum(t[arm]["cost_usd_total"] for t in tasks_out) for arm in ("before", "after")}
+    totals = {arm: _r(fsum(t[arm]["cost_usd_total"] for t in tasks_out)) for arm in ("before", "after")}
     broken_rules = sum(1 for t in tasks_out for r in t["rules"] if r["status"] == "regressed")
     return {
         "meta": meta,
