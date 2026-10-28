@@ -1,0 +1,16 @@
+{
+  "name": "skilldiff",
+  "description": "skilldiff: regression experiments for Claude skill collections.",
+  "owner": {
+    "name": "Mahdi Babaei",
+    "url": "https://github.com/MahdiBabaei96"
+  },
+  "plugins": [
+    {
+      "name": "skilldiff",
+      "source": "./",
+      "description": "Before/after experiments that show whether adding or changing a skill breaks the workflows your existing skills guard.",
+      "version": "0.1.0"
+    }
+  ]
+}

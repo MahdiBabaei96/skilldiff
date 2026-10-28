@@ -1,0 +1,16 @@
+# Someone copies a community skill into the collection. Its SKILL.md declares the same
+# name as the team's own security-audit, but it lives in a different folder.
+include = ["../shop/tasks.toml"]
+
+[before]
+skills = ["../shop/skills"]
+
+[after]
+skills = ["../shop/skills", "../shop/candidates/security-audit-oss"]
+
+[run]
+repeats = 5
+parallel = 10
+model = "sonnet"
+max_turns = 30
+max_budget_usd = 2.0

@@ -1,0 +1,10 @@
+{
+  "name": "skilldiff",
+  "version": "0.1.0",
+  "description": "Before/after experiments that show whether adding or changing a skill breaks the workflows your existing skills guard.",
+  "author": { "name": "Mahdi Babaei", "url": "https://github.com/MahdiBabaei96" },
+  "homepage": "https://github.com/MahdiBabaei96/skilldiff",
+  "repository": "https://github.com/MahdiBabaei96/skilldiff",
+  "license": "MIT",
+  "keywords": ["skills", "regression", "testing", "evals", "ci"]
+}

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pytest -q
+      - name: Re-render the committed example reports
+        run: |
+          for d in examples/0*/results; do skilldiff report "$d" --format headline; done
+          git diff --exit-code -- examples/ || (echo "committed reports are stale: run skilldiff report on them" && exit 1)
+
+  action:
+    # Exercises action.yml end to end with the deterministic fake agent (no API key needed).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: skilldiff
+        uses: ./
+        env:
+          FAKE_CLAUDE_PLAN: ${{ github.workspace }}/tests/action-fixture/plan.json
+        with:
+          config: tests/action-fixture/skilldiff.toml
+          anthropic-api-key: not-used-by-the-fake-agent
+          comment: "false"
+          fail-on: never
+      - name: The planted regression is detected
+        env:
+          REGRESSION: ${{ steps.skilldiff.outputs.regression }}
+          HEADLINE: ${{ steps.skilldiff.outputs.headline }}
+        run: |
+          echo "$HEADLINE"
+          test "$REGRESSION" = "true"
+          grep -q "read-only" "${{ steps.skilldiff.outputs.report-dir }}/report.md"

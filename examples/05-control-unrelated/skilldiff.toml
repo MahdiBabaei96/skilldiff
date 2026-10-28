@@ -1,0 +1,15 @@
+# Control: adding a skill with no overlap (SQL style). Expect no change.
+include = ["../shop/tasks.toml"]
+
+[before]
+skills = ["../shop/skills"]
+
+[after]
+skills = ["../shop/skills", "../shop/candidates/sql-style"]
+
+[run]
+repeats = 5
+parallel = 10
+model = "sonnet"
+max_turns = 30
+max_budget_usd = 2.0

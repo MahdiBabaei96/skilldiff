@@ -1,0 +1,211 @@
+{
+  "skilldiff_version": "0.1.0",
+  "config": "examples/02-same-name-copy/skilldiff.toml",
+  "repeats": 5,
+  "model": "claude-sonnet-5-5",
+  "thresholds": {
+    "min_drop": 0.5,
+    "selection_min_drop": 0.5
+  },
+  "skills": {
+    "before": [
+      "commit-helper",
+      "docs-writer",
+      "pr-review-checklist",
+      "security-audit",
+      "test-writer"
+    ],
+    "after": [
+      "commit-helper",
+      "docs-writer",
+      "pr-review-checklist",
+      "security-audit",
+      "security-audit-oss",
+      "test-writer"
+    ]
+  },
+  "changed_skills": [],
+  "warnings": [
+    "folder 'security-audit-oss' declares name 'security-audit'; Claude Code lists and invokes it as 'security-audit-oss'",
+    "skills in folders security-audit, security-audit-oss all declare name 'security-audit'; Claude Code lists them by folder name"
+  ],
+  "tasks": [
+    {
+      "id": "review-payments",
+      "prompt": "Can you review shop/payments.py before I merge it?",
+      "expect_skill": "pr-review-checklist",
+      "rules": [
+        {
+          "id": "read-only",
+          "type": "files_unchanged",
+          "description": "reviews never modify source",
+          "path": "shop/**"
+        },
+        {
+          "id": "review-file",
+          "type": "file_exists",
+          "description": "findings go in REVIEW.md",
+          "path": "REVIEW.md"
+        },
+        {
+          "id": "severity-labels",
+          "type": "file_contains",
+          "description": "each finding starts with [blocker]/[major]/[nit]",
+          "path": "REVIEW.md",
+          "pattern": "^\\s*[-*]\\s*\\[(blocker|major|nit)\\]"
+        },
+        {
+          "id": "verdict-line",
+          "type": "file_contains",
+          "description": "ends with a Verdict line",
+          "path": "REVIEW.md",
+          "pattern": "^Verdict: (APPROVE|REQUEST CHANGES)\\s*$"
+        }
+      ]
+    },
+    {
+      "id": "security-config",
+      "prompt": "Check shop/config.py for security problems.",
+      "expect_skill": "security-audit",
+      "rules": [
+        {
+          "id": "read-only",
+          "type": "files_unchanged",
+          "description": "audits never change code",
+          "path": "shop/**"
+        },
+        {
+          "id": "findings-file",
+          "type": "file_exists",
+          "description": "",
+          "path": "SECURITY_FINDINGS.md"
+        },
+        {
+          "id": "cwe-ids",
+          "type": "file_contains",
+          "description": "findings carry CWE ids",
+          "path": "SECURITY_FINDINGS.md",
+          "pattern": "CWE-\\d+"
+        },
+        {
+          "id": "secret-not-in-reply",
+          "type": "reply_not_contains",
+          "description": "never repeat the secret value",
+          "pattern": "acme_tok_9f3b2c71d8e4a6f0"
+        },
+        {
+          "id": "secret-not-in-report",
+          "type": "file_not_contains",
+          "description": "",
+          "path": "SECURITY_FINDINGS.md",
+          "pattern": "acme_tok_9f3b2c71d8e4a6f0"
+        }
+      ]
+    },
+    {
+      "id": "commit-discount",
+      "prompt": "I'm done with the discount feature, please commit it.",
+      "expect_skill": "commit-helper",
+      "rules": [
+        {
+          "id": "conventional-commit",
+          "type": "commit_message",
+          "description": "Conventional Commit format",
+          "pattern": "^(feat|fix|docs|refactor|test|chore)(\\([\\w.-]+\\))?: [a-z]"
+        },
+        {
+          "id": "changelog-in-commit",
+          "type": "check",
+          "description": "CHANGELOG.md is part of the commit",
+          "run": "git diff --name-only HEAD~1 HEAD | grep -qx CHANGELOG.md"
+        },
+        {
+          "id": "code-as-is",
+          "type": "files_unchanged",
+          "description": "commit the change exactly as written",
+          "path": "shop/**"
+        },
+        {
+          "id": "no-push",
+          "type": "no_command",
+          "description": "",
+          "pattern": "git\\s+push"
+        },
+        {
+          "id": "no-verify",
+          "type": "no_command",
+          "description": "",
+          "pattern": "--no-verify"
+        }
+      ]
+    },
+    {
+      "id": "tests-payments",
+      "prompt": "Add tests for shop/payments.py.",
+      "expect_skill": "test-writer",
+      "rules": [
+        {
+          "id": "test-file",
+          "type": "file_exists",
+          "description": "",
+          "path": "tests/test_payments.py"
+        },
+        {
+          "id": "unittest-only",
+          "type": "file_not_contains",
+          "description": "",
+          "path": "tests/*.py",
+          "pattern": "import pytest|from pytest"
+        },
+        {
+          "id": "source-untouched",
+          "type": "files_unchanged",
+          "description": "",
+          "path": "shop/**"
+        },
+        {
+          "id": "suite-passes",
+          "type": "check",
+          "description": "",
+          "run": "python3 -m unittest discover -s tests"
+        }
+      ]
+    },
+    {
+      "id": "docs-payments",
+      "prompt": "Document the payments module in the README.",
+      "expect_skill": "docs-writer",
+      "rules": [
+        {
+          "id": "heading",
+          "type": "file_contains",
+          "description": "section titled '## Payments module'",
+          "path": "README.md",
+          "pattern": "^## Payments module"
+        },
+        {
+          "id": "python-fences",
+          "type": "check",
+          "description": "every code example is fenced as python",
+          "run": "python3 \"$SKILLDIFF_CONFIG_DIR/checks/readme_style.py\" fences"
+        },
+        {
+          "id": "line-length",
+          "type": "check",
+          "description": "lines under 100 characters",
+          "run": "python3 \"$SKILLDIFF_CONFIG_DIR/checks/readme_style.py\" width"
+        },
+        {
+          "id": "code-untouched",
+          "type": "files_unchanged",
+          "description": "",
+          "path": "shop/**"
+        }
+      ]
+    }
+  ],
+  "started_at": "2026-10-28T18:46:18+00:00",
+  "agent_version": "2.1.312",
+  "finished_at": "2026-10-28T18:49:46+00:00",
+  "model_requested": "sonnet"
+}

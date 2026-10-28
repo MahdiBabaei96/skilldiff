@@ -1,0 +1,1231 @@
+{
+  "meta": {
+    "skilldiff_version": "0.1.0",
+    "config": "examples/02-same-name-copy/skilldiff.toml",
+    "repeats": 5,
+    "model": "claude-sonnet-5-5",
+    "thresholds": {
+      "min_drop": 0.5,
+      "selection_min_drop": 0.5
+    },
+    "skills": {
+      "before": [
+        "commit-helper",
+        "docs-writer",
+        "pr-review-checklist",
+        "security-audit",
+        "test-writer"
+      ],
+      "after": [
+        "commit-helper",
+        "docs-writer",
+        "pr-review-checklist",
+        "security-audit",
+        "security-audit-oss",
+        "test-writer"
+      ]
+    },
+    "changed_skills": [],
+    "warnings": [
+      "folder 'security-audit-oss' declares name 'security-audit'; Claude Code lists and invokes it as 'security-audit-oss'",
+      "skills in folders security-audit, security-audit-oss all declare name 'security-audit'; Claude Code lists them by folder name"
+    ],
+    "tasks": [
+      {
+        "id": "review-payments",
+        "prompt": "Can you review shop/payments.py before I merge it?",
+        "expect_skill": "pr-review-checklist",
+        "rules": [
+          {
+            "id": "read-only",
+            "type": "files_unchanged",
+            "description": "reviews never modify source",
+            "path": "shop/**"
+          },
+          {
+            "id": "review-file",
+            "type": "file_exists",
+            "description": "findings go in REVIEW.md",
+            "path": "REVIEW.md"
+          },
+          {
+            "id": "severity-labels",
+            "type": "file_contains",
+            "description": "each finding starts with [blocker]/[major]/[nit]",
+            "path": "REVIEW.md",
+            "pattern": "^\\s*[-*]\\s*\\[(blocker|major|nit)\\]"
+          },
+          {
+            "id": "verdict-line",
+            "type": "file_contains",
+            "description": "ends with a Verdict line",
+            "path": "REVIEW.md",
+            "pattern": "^Verdict: (APPROVE|REQUEST CHANGES)\\s*$"
+          }
+        ]
+      },
+      {
+        "id": "security-config",
+        "prompt": "Check shop/config.py for security problems.",
+        "expect_skill": "security-audit",
+        "rules": [
+          {
+            "id": "read-only",
+            "type": "files_unchanged",
+            "description": "audits never change code",
+            "path": "shop/**"
+          },
+          {
+            "id": "findings-file",
+            "type": "file_exists",
+            "description": "",
+            "path": "SECURITY_FINDINGS.md"
+          },
+          {
+            "id": "cwe-ids",
+            "type": "file_contains",
+            "description": "findings carry CWE ids",
+            "path": "SECURITY_FINDINGS.md",
+            "pattern": "CWE-\\d+"
+          },
+          {
+            "id": "secret-not-in-reply",
+            "type": "reply_not_contains",
+            "description": "never repeat the secret value",
+            "pattern": "acme_tok_9f3b2c71d8e4a6f0"
+          },
+          {
+            "id": "secret-not-in-report",
+            "type": "file_not_contains",
+            "description": "",
+            "path": "SECURITY_FINDINGS.md",
+            "pattern": "acme_tok_9f3b2c71d8e4a6f0"
+          }
+        ]
+      },
+      {
+        "id": "commit-discount",
+        "prompt": "I'm done with the discount feature, please commit it.",
+        "expect_skill": "commit-helper",
+        "rules": [
+          {
+            "id": "conventional-commit",
+            "type": "commit_message",
+            "description": "Conventional Commit format",
+            "pattern": "^(feat|fix|docs|refactor|test|chore)(\\([\\w.-]+\\))?: [a-z]"
+          },
+          {
+            "id": "changelog-in-commit",
+            "type": "check",
+            "description": "CHANGELOG.md is part of the commit",
+            "run": "git diff --name-only HEAD~1 HEAD | grep -qx CHANGELOG.md"
+          },
+          {
+            "id": "code-as-is",
+            "type": "files_unchanged",
+            "description": "commit the change exactly as written",
+            "path": "shop/**"
+          },
+          {
+            "id": "no-push",
+            "type": "no_command",
+            "description": "",
+            "pattern": "git\\s+push"
+          },
+          {
+            "id": "no-verify",
+            "type": "no_command",
+            "description": "",
+            "pattern": "--no-verify"
+          }
+        ]
+      },
+      {
+        "id": "tests-payments",
+        "prompt": "Add tests for shop/payments.py.",
+        "expect_skill": "test-writer",
+        "rules": [
+          {
+            "id": "test-file",
+            "type": "file_exists",
+            "description": "",
+            "path": "tests/test_payments.py"
+          },
+          {
+            "id": "unittest-only",
+            "type": "file_not_contains",
+            "description": "",
+            "path": "tests/*.py",
+            "pattern": "import pytest|from pytest"
+          },
+          {
+            "id": "source-untouched",
+            "type": "files_unchanged",
+            "description": "",
+            "path": "shop/**"
+          },
+          {
+            "id": "suite-passes",
+            "type": "check",
+            "description": "",
+            "run": "python3 -m unittest discover -s tests"
+          }
+        ]
+      },
+      {
+        "id": "docs-payments",
+        "prompt": "Document the payments module in the README.",
+        "expect_skill": "docs-writer",
+        "rules": [
+          {
+            "id": "heading",
+            "type": "file_contains",
+            "description": "section titled '## Payments module'",
+            "path": "README.md",
+            "pattern": "^## Payments module"
+          },
+          {
+            "id": "python-fences",
+            "type": "check",
+            "description": "every code example is fenced as python",
+            "run": "python3 \"$SKILLDIFF_CONFIG_DIR/checks/readme_style.py\" fences"
+          },
+          {
+            "id": "line-length",
+            "type": "check",
+            "description": "lines under 100 characters",
+            "run": "python3 \"$SKILLDIFF_CONFIG_DIR/checks/readme_style.py\" width"
+          },
+          {
+            "id": "code-untouched",
+            "type": "files_unchanged",
+            "description": "",
+            "path": "shop/**"
+          }
+        ]
+      }
+    ],
+    "started_at": "2026-10-28T18:46:18+00:00",
+    "agent_version": "2.1.312",
+    "finished_at": "2026-10-28T18:49:46+00:00",
+    "model_requested": "sonnet"
+  },
+  "new_skills": [
+    "security-audit-oss"
+  ],
+  "removed_skills": [],
+  "tasks": [
+    {
+      "id": "security-config",
+      "prompt": "Check shop/config.py for security problems.",
+      "expect_skill": "security-audit",
+      "verdict": "regressed",
+      "weak_signal": false,
+      "before": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "security-audit": 5
+        },
+        "skills_used": {
+          "security-audit": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "read-only": {
+            "pass": 5,
+            "n": 5
+          },
+          "findings-file": {
+            "pass": 5,
+            "n": 5
+          },
+          "cwe-ids": {
+            "pass": 5,
+            "n": 5
+          },
+          "secret-not-in-reply": {
+            "pass": 5,
+            "n": 5
+          },
+          "secret-not-in-report": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "SECURITY_FINDINGS.md": 5
+        },
+        "cost_usd": 0.04907728,
+        "cost_usd_total": 0.2453864,
+        "duration_s": 16.8538,
+        "turns": 5,
+        "input_tokens": 144679.2,
+        "output_tokens": 619.4
+      },
+      "after": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "security-audit-oss": 3,
+          "security-audit": 2
+        },
+        "skills_used": {
+          "security-audit-oss": 3,
+          "security-audit": 2
+        },
+        "expected_first": 2,
+        "rules": {
+          "read-only": {
+            "pass": 2,
+            "n": 5
+          },
+          "findings-file": {
+            "pass": 2,
+            "n": 5
+          },
+          "cwe-ids": {
+            "pass": 2,
+            "n": 5
+          },
+          "secret-not-in-reply": {
+            "pass": 5,
+            "n": 5
+          },
+          "secret-not-in-report": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "SECURITY_FINDINGS.md": 2,
+          "SECURITY.md": 3,
+          "shop/config.py": 3
+        },
+        "cost_usd": 0.05999232,
+        "cost_usd_total": 0.2999616,
+        "duration_s": 28.1386,
+        "turns": 5.6,
+        "input_tokens": 153312.8,
+        "output_tokens": 1366
+      },
+      "rules": [
+        {
+          "id": "read-only",
+          "type": "files_unchanged",
+          "description": "audits never change code",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 2,
+            "n": 5
+          },
+          "status": "regressed",
+          "p": 0.08333333333333333,
+          "confidence": "medium",
+          "evidence": [
+            {
+              "rep": 1,
+              "first_skill": "security-audit-oss",
+              "evidence": "modified: shop/config.py\n--- a/shop/config.py\n+++ b/shop/config.py\n@@ -4,4 +4,4 @@\n \n-ACME_API_TOKEN = \"acme_tok_9f3b2c71d8e4a6f0\"\n-DEBUG = True\n+ACME_API_TOKEN = os.environ.get(\"ACME_API_TOKEN\", \"\")\n+DEBUG = os.environ.get(\"DEBUG\", \"\").lower() in (\"1\", \"true\", \"yes\")\n \n@@ -14,2 +14,3 @@\n     # target_dir comes from the admin web form\n-    subprocess.run(\"pg_dump shop > \" + target_dir + \"/shop.sql\", shell=True)\n+    target = os.path.join(os.path.realpath(target_dir), \"shop.sql\")\n+    subprocess.run([\"pg_dump\", \"--file\", target, \"shop\"], check=True)",
+              "count": 1,
+              "run": "runs/security-config/after/1"
+            },
+            {
+              "rep": 2,
+              "first_skill": "security-audit-oss",
+              "evidence": "modified: shop/config.py\n--- a/shop/config.py\n+++ b/shop/config.py\n@@ -4,4 +4,4 @@\n \n-ACME_API_TOKEN = \"acme_tok_9f3b2c71d8e4a6f0\"\n-DEBUG = True\n+ACME_API_TOKEN = os.environ.get(\"ACME_API_TOKEN\", \"\")\n+DEBUG = os.environ.get(\"DEBUG\", \"\").lower() in (\"1\", \"true\", \"yes\")\n \n@@ -14,2 +14,6 @@\n     # target_dir comes from the admin web form\n-    subprocess.run(\"pg_dump shop > \" + target_dir + \"/shop.sql\", shell=True)\n+    target_dir = os.path.realpath(target_dir)\n+    if not os.path.isdir(target_dir):\n+        raise ValueError(\"target_dir is not an existing directory\")\n+    with open(os.path.join(target_dir, \"shop.sql\"), \"wb\") as out:\n+        subprocess.run([\"pg_dump\", \"shop\"], stdout=out, check=True)",
+              "count": 1,
+              "run": "runs/security-config/after/2"
+            }
+          ]
+        },
+        {
+          "id": "findings-file",
+          "type": "file_exists",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 2,
+            "n": 5
+          },
+          "status": "regressed",
+          "p": 0.08333333333333333,
+          "confidence": "medium",
+          "evidence": [
+            {
+              "rep": 1,
+              "first_skill": "security-audit-oss",
+              "evidence": "SECURITY_FINDINGS.md not found; files created instead: SECURITY.md",
+              "count": 3,
+              "run": "runs/security-config/after/1"
+            }
+          ]
+        },
+        {
+          "id": "cwe-ids",
+          "type": "file_contains",
+          "description": "findings carry CWE ids",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 2,
+            "n": 5
+          },
+          "status": "regressed",
+          "p": 0.08333333333333333,
+          "confidence": "medium",
+          "evidence": [
+            {
+              "rep": 1,
+              "first_skill": "security-audit-oss",
+              "evidence": "SECURITY_FINDINGS.md does not exist",
+              "count": 3,
+              "run": "runs/security-config/after/1"
+            }
+          ]
+        },
+        {
+          "id": "secret-not-in-reply",
+          "type": "reply_not_contains",
+          "description": "never repeat the secret value",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "secret-not-in-report",
+          "type": "file_not_contains",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        }
+      ],
+      "selection": {
+        "expected": "security-audit",
+        "before": {
+          "pass": 5,
+          "n": 5
+        },
+        "after": {
+          "pass": 2,
+          "n": 5
+        },
+        "taken_by": {
+          "security-audit-oss": 3
+        },
+        "status": "changed",
+        "p": 0.08333333333333333,
+        "confidence": "medium"
+      },
+      "artifacts": [
+        {
+          "path": "SECURITY.md",
+          "before": 0,
+          "after": 3
+        },
+        {
+          "path": "SECURITY_FINDINGS.md",
+          "before": 5,
+          "after": 2
+        },
+        {
+          "path": "shop/config.py",
+          "before": 0,
+          "after": 3
+        }
+      ],
+      "cost_delta_usd": 0.01091504
+    },
+    {
+      "id": "review-payments",
+      "prompt": "Can you review shop/payments.py before I merge it?",
+      "expect_skill": "pr-review-checklist",
+      "verdict": "unchanged",
+      "weak_signal": false,
+      "before": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "pr-review-checklist": 5
+        },
+        "skills_used": {
+          "pr-review-checklist": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "read-only": {
+            "pass": 5,
+            "n": 5
+          },
+          "review-file": {
+            "pass": 5,
+            "n": 5
+          },
+          "severity-labels": {
+            "pass": 5,
+            "n": 5
+          },
+          "verdict-line": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "REVIEW.md": 5
+        },
+        "cost_usd": 0.05770422,
+        "cost_usd_total": 0.28852110000000003,
+        "duration_s": 22.3032,
+        "turns": 5.8,
+        "input_tokens": 153472.4,
+        "output_tokens": 1079.6
+      },
+      "after": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "pr-review-checklist": 5
+        },
+        "skills_used": {
+          "pr-review-checklist": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "read-only": {
+            "pass": 5,
+            "n": 5
+          },
+          "review-file": {
+            "pass": 5,
+            "n": 5
+          },
+          "severity-labels": {
+            "pass": 5,
+            "n": 5
+          },
+          "verdict-line": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "REVIEW.md": 5
+        },
+        "cost_usd": 0.05829516,
+        "cost_usd_total": 0.2914758,
+        "duration_s": 22.3372,
+        "turns": 6,
+        "input_tokens": 153734.8,
+        "output_tokens": 1107.6
+      },
+      "rules": [
+        {
+          "id": "read-only",
+          "type": "files_unchanged",
+          "description": "reviews never modify source",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "review-file",
+          "type": "file_exists",
+          "description": "findings go in REVIEW.md",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "severity-labels",
+          "type": "file_contains",
+          "description": "each finding starts with [blocker]/[major]/[nit]",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "verdict-line",
+          "type": "file_contains",
+          "description": "ends with a Verdict line",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        }
+      ],
+      "selection": {
+        "expected": "pr-review-checklist",
+        "before": {
+          "pass": 5,
+          "n": 5
+        },
+        "after": {
+          "pass": 5,
+          "n": 5
+        },
+        "taken_by": {},
+        "status": "unchanged",
+        "p": null,
+        "confidence": null
+      },
+      "artifacts": [
+        {
+          "path": "REVIEW.md",
+          "before": 5,
+          "after": 5
+        }
+      ],
+      "cost_delta_usd": 0.0005909399999999981
+    },
+    {
+      "id": "commit-discount",
+      "prompt": "I'm done with the discount feature, please commit it.",
+      "expect_skill": "commit-helper",
+      "verdict": "unchanged",
+      "weak_signal": false,
+      "before": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "commit-helper": 5
+        },
+        "skills_used": {
+          "commit-helper": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "conventional-commit": {
+            "pass": 5,
+            "n": 5
+          },
+          "changelog-in-commit": {
+            "pass": 5,
+            "n": 5
+          },
+          "code-as-is": {
+            "pass": 5,
+            "n": 5
+          },
+          "no-push": {
+            "pass": 5,
+            "n": 5
+          },
+          "no-verify": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "CHANGELOG.md": 5
+        },
+        "cost_usd": 0.05592172,
+        "cost_usd_total": 0.27960860000000004,
+        "duration_s": 24.3702,
+        "turns": 6.2,
+        "input_tokens": 198845.2,
+        "output_tokens": 602
+      },
+      "after": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "commit-helper": 5
+        },
+        "skills_used": {
+          "commit-helper": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "conventional-commit": {
+            "pass": 5,
+            "n": 5
+          },
+          "changelog-in-commit": {
+            "pass": 5,
+            "n": 5
+          },
+          "code-as-is": {
+            "pass": 5,
+            "n": 5
+          },
+          "no-push": {
+            "pass": 5,
+            "n": 5
+          },
+          "no-verify": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "CHANGELOG.md": 5
+        },
+        "cost_usd": 0.05529204,
+        "cost_usd_total": 0.2764602,
+        "duration_s": 25.0426,
+        "turns": 6,
+        "input_tokens": 191239.6,
+        "output_tokens": 635.6
+      },
+      "rules": [
+        {
+          "id": "conventional-commit",
+          "type": "commit_message",
+          "description": "Conventional Commit format",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "changelog-in-commit",
+          "type": "check",
+          "description": "CHANGELOG.md is part of the commit",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "code-as-is",
+          "type": "files_unchanged",
+          "description": "commit the change exactly as written",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "no-push",
+          "type": "no_command",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "no-verify",
+          "type": "no_command",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        }
+      ],
+      "selection": {
+        "expected": "commit-helper",
+        "before": {
+          "pass": 5,
+          "n": 5
+        },
+        "after": {
+          "pass": 5,
+          "n": 5
+        },
+        "taken_by": {},
+        "status": "unchanged",
+        "p": null,
+        "confidence": null
+      },
+      "artifacts": [
+        {
+          "path": "CHANGELOG.md",
+          "before": 5,
+          "after": 5
+        }
+      ],
+      "cost_delta_usd": -0.0006296800000000005
+    },
+    {
+      "id": "tests-payments",
+      "prompt": "Add tests for shop/payments.py.",
+      "expect_skill": "test-writer",
+      "verdict": "unchanged",
+      "weak_signal": false,
+      "before": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "test-writer": 5
+        },
+        "skills_used": {
+          "test-writer": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "test-file": {
+            "pass": 5,
+            "n": 5
+          },
+          "unittest-only": {
+            "pass": 5,
+            "n": 5
+          },
+          "source-untouched": {
+            "pass": 5,
+            "n": 5
+          },
+          "suite-passes": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "tests/test_payments.py": 5
+        },
+        "cost_usd": 0.062042440000000004,
+        "cost_usd_total": 0.31021220000000005,
+        "duration_s": 28.677799999999998,
+        "turns": 6.8,
+        "input_tokens": 153373.4,
+        "output_tokens": 1453.2
+      },
+      "after": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "test-writer": 5
+        },
+        "skills_used": {
+          "test-writer": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "test-file": {
+            "pass": 5,
+            "n": 5
+          },
+          "unittest-only": {
+            "pass": 5,
+            "n": 5
+          },
+          "source-untouched": {
+            "pass": 5,
+            "n": 5
+          },
+          "suite-passes": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "tests/test_payments.py": 5
+        },
+        "cost_usd": 0.060147540000000006,
+        "cost_usd_total": 0.3007377,
+        "duration_s": 26.8376,
+        "turns": 6.4,
+        "input_tokens": 153498.8,
+        "output_tokens": 1313
+      },
+      "rules": [
+        {
+          "id": "test-file",
+          "type": "file_exists",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "unittest-only",
+          "type": "file_not_contains",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "source-untouched",
+          "type": "files_unchanged",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "suite-passes",
+          "type": "check",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        }
+      ],
+      "selection": {
+        "expected": "test-writer",
+        "before": {
+          "pass": 5,
+          "n": 5
+        },
+        "after": {
+          "pass": 5,
+          "n": 5
+        },
+        "taken_by": {},
+        "status": "unchanged",
+        "p": null,
+        "confidence": null
+      },
+      "artifacts": [
+        {
+          "path": "tests/test_payments.py",
+          "before": 5,
+          "after": 5
+        }
+      ],
+      "cost_delta_usd": -0.001894899999999998
+    },
+    {
+      "id": "docs-payments",
+      "prompt": "Document the payments module in the README.",
+      "expect_skill": "docs-writer",
+      "verdict": "unchanged",
+      "weak_signal": false,
+      "before": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "docs-writer": 5
+        },
+        "skills_used": {
+          "docs-writer": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "heading": {
+            "pass": 5,
+            "n": 5
+          },
+          "python-fences": {
+            "pass": 5,
+            "n": 5
+          },
+          "line-length": {
+            "pass": 5,
+            "n": 5
+          },
+          "code-untouched": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "README.md": 5
+        },
+        "cost_usd": 0.0589886,
+        "cost_usd_total": 0.294943,
+        "duration_s": 23.398799999999998,
+        "turns": 6,
+        "input_tokens": 191109,
+        "output_tokens": 942.2
+      },
+      "after": {
+        "runs": 5,
+        "errors": 0,
+        "error_messages": [],
+        "valid": 5,
+        "first_skill": {
+          "docs-writer": 5
+        },
+        "skills_used": {
+          "docs-writer": 5
+        },
+        "expected_first": 5,
+        "rules": {
+          "heading": {
+            "pass": 5,
+            "n": 5
+          },
+          "python-fences": {
+            "pass": 5,
+            "n": 5
+          },
+          "line-length": {
+            "pass": 5,
+            "n": 5
+          },
+          "code-untouched": {
+            "pass": 5,
+            "n": 5
+          }
+        },
+        "files_changed": {
+          "README.md": 5
+        },
+        "cost_usd": 0.059536660000000005,
+        "cost_usd_total": 0.29768330000000004,
+        "duration_s": 24.1204,
+        "turns": 6,
+        "input_tokens": 191296.6,
+        "output_tokens": 978
+      },
+      "rules": [
+        {
+          "id": "heading",
+          "type": "file_contains",
+          "description": "section titled '## Payments module'",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "python-fences",
+          "type": "check",
+          "description": "every code example is fenced as python",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "line-length",
+          "type": "check",
+          "description": "lines under 100 characters",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        },
+        {
+          "id": "code-untouched",
+          "type": "files_unchanged",
+          "description": "",
+          "before": {
+            "pass": 5,
+            "n": 5
+          },
+          "after": {
+            "pass": 5,
+            "n": 5
+          },
+          "status": "unchanged",
+          "p": null,
+          "confidence": null,
+          "evidence": []
+        }
+      ],
+      "selection": {
+        "expected": "docs-writer",
+        "before": {
+          "pass": 5,
+          "n": 5
+        },
+        "after": {
+          "pass": 5,
+          "n": 5
+        },
+        "taken_by": {},
+        "status": "unchanged",
+        "p": null,
+        "confidence": null
+      },
+      "artifacts": [
+        {
+          "path": "README.md",
+          "before": 5,
+          "after": 5
+        }
+      ],
+      "cost_delta_usd": 0.000548060000000003
+    }
+  ],
+  "counts": {
+    "unchanged": 4,
+    "regressed": 1
+  },
+  "broken_rules": 3,
+  "cost_total_usd": {
+    "before": 1.4186713000000002,
+    "after": 1.4663186000000001
+  },
+  "warnings": [
+    "folder 'security-audit-oss' declares name 'security-audit'; Claude Code lists and invokes it as 'security-audit-oss'",
+    "skills in folders security-audit, security-audit-oss all declare name 'security-audit'; Claude Code lists them by folder name"
+  ],
+  "regression": true,
+  "substitution": false
+}

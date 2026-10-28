@@ -1,0 +1,27 @@
+# Copy to .github/workflows/skilldiff.yml in the repository that holds your skills.
+name: skilldiff
+
+on:
+  pull_request:
+    paths:
+      - ".claude/skills/**"
+      - "skilldiff.toml"
+      - "skilldiff/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  skilldiff:
+    runs-on: ubuntu-latest
+    # Fork PRs don't receive secrets, so this job only runs for branches in this repository.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: MahdiBabaei96/skilldiff@v0.1.0
+        with:
+          config: skilldiff.toml
+          skills-path: .claude/skills
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          repeats: "3"

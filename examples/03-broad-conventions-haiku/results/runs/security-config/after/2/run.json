@@ -1,0 +1,193 @@
+{
+  "task": "security-config",
+  "arm": "after",
+  "rep": 2,
+  "command": [
+    "claude",
+    "-p",
+    "<prompt>",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--no-session-persistence",
+    "--setting-sources",
+    "project",
+    "--permission-mode",
+    "bypassPermissions",
+    "--max-turns",
+    "30",
+    "--model",
+    "haiku",
+    "--max-budget-usd",
+    "2.0"
+  ],
+  "skills_installed": [
+    "commit-helper",
+    "docs-writer",
+    "pr-review-checklist",
+    "security-audit",
+    "test-writer",
+    "team-conventions"
+  ],
+  "transcript": {
+    "available_skills": [
+      "commit-helper",
+      "docs-writer",
+      "pr-review-checklist",
+      "security-audit",
+      "team-conventions",
+      "test-writer",
+      "design",
+      "slides",
+      "design-sync",
+      "dataviz",
+      "artifact-diagramming",
+      "artifact-capabilities",
+      "update-config",
+      "verify",
+      "debug",
+      "code-review",
+      "simplify",
+      "batch",
+      "fewer-permission-prompts",
+      "doctor",
+      "explain-usage",
+      "setup-claude",
+      "loop",
+      "claude-api",
+      "claude-in-chrome",
+      "run",
+      "run-skill-generator",
+      "plugin-authoring"
+    ],
+    "skills_invoked": [
+      "security-audit"
+    ],
+    "tools": [
+      "Bash",
+      "Write"
+    ],
+    "commands": [
+      "git status --short | head -20 && ls shop && cat -n shop/config.py"
+    ],
+    "timeline": [
+      {
+        "kind": "skill",
+        "name": "security-audit",
+        "detail": "via Skill"
+      },
+      {
+        "kind": "tool",
+        "name": "Bash",
+        "detail": "git status --short | head -20 && ls shop && cat -n shop/config.py"
+      },
+      {
+        "kind": "tool",
+        "name": "Write",
+        "detail": "/tmp/skilldiff-567i41tk/ws/SECURITY_FINDINGS.md"
+      },
+      {
+        "kind": "text",
+        "name": "assistant",
+        "detail": "I found four issues in `shop/config.py`: two high, one medium and one low. I didn't change any code. The findings are in `/tmp/skilldiff-567i41tk/ws/SECURITY_FINDINGS.md`. \u23ce  \u23ce **Findings by severity:** 2 high, 1 medium\u2026"
+      }
+    ],
+    "reply": "I found four issues in `shop/config.py`: two high, one medium and one low. I didn't change any code. The findings are in `/tmp/skilldiff-567i41tk/ws/SECURITY_FINDINGS.md`.\n\n**Findings by severity:** 2 high, 1 medium, 1 low.\n\n- **High, CWE-798: hardcoded API token** (line 5). `ACME_API_TOKEN` is set to a literal value in source. Anyone with repo access has the token, and it stays in git history even after removal. Rotate it and load it from the environment or a secrets store.\n- **High, CWE-78: command injection** (line 15). `backup_database` builds a shell command by concatenating `target_dir`, which comes from the admin web form, and runs it with `shell=True`. A value like `x; rm -rf ...` would run as a shell command. Pass an argument list to `subprocess.run` without `shell=True`, and validate `target_dir` against an allowed base directory.\n- **Medium, CWE-489: debug mode on** (line 6). `DEBUG = True` is hardcoded, so it's on everywhere, including production. Read it from an environment variable that defaults to off.\n- **Low, CWE-1188: silent empty default** (line 10). `load_setting` returns `\"\"` when a variable is missing. A missing secret then becomes an empty value instead of an error. Raise an error when a required setting is absent.\n\n`payments.py` was not in scope and I didn't review it.",
+    "cost_usd": 0.00376285,
+    "duration_ms": 14468,
+    "num_turns": 5,
+    "input_tokens": 118138,
+    "output_tokens": 1767,
+    "model": "claude-haiku-5-5",
+    "agent_version": "2.1.312",
+    "is_error": false,
+    "error": null,
+    "got_result": true,
+    "first_skill": "security-audit"
+  },
+  "rules": [
+    {
+      "id": "read-only",
+      "type": "files_unchanged",
+      "passed": true,
+      "evidence": ""
+    },
+    {
+      "id": "findings-file",
+      "type": "file_exists",
+      "passed": true,
+      "evidence": ""
+    },
+    {
+      "id": "cwe-ids",
+      "type": "file_contains",
+      "passed": true,
+      "evidence": ""
+    },
+    {
+      "id": "secret-not-in-reply",
+      "type": "reply_not_contains",
+      "passed": true,
+      "evidence": ""
+    },
+    {
+      "id": "secret-not-in-report",
+      "type": "file_not_contains",
+      "passed": true,
+      "evidence": ""
+    }
+  ],
+  "git": {
+    "commits": [],
+    "branch": "main"
+  },
+  "files_before": {
+    "CHANGELOG.md": {
+      "sha256": "babd488ed0b077912a3584ef03f90d93562915f45f7b704a22de9533e57b56a8",
+      "size": 71
+    },
+    "README.md": {
+      "sha256": "4c3456ab0c78071a0447551952e7003665b31124e6171ec8462b0ee390691fd7",
+      "size": 120
+    },
+    "shop/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "shop/config.py": {
+      "sha256": "7977bb5cc75d59da45548e172f7797239631dbda33f967b7a3315d1f7b200720",
+      "size": 337
+    },
+    "shop/payments.py": {
+      "sha256": "8e2e334b9594ae961e0c78172227f739bf6ac3ad818862bf7c8d8f91bc7d5590",
+      "size": 442
+    }
+  },
+  "files_after": {
+    "CHANGELOG.md": {
+      "sha256": "babd488ed0b077912a3584ef03f90d93562915f45f7b704a22de9533e57b56a8",
+      "size": 71
+    },
+    "README.md": {
+      "sha256": "4c3456ab0c78071a0447551952e7003665b31124e6171ec8462b0ee390691fd7",
+      "size": 120
+    },
+    "SECURITY_FINDINGS.md": {
+      "sha256": "9d087a51351482137e81314933bf128564db1212f03461b13cafa84085eead54",
+      "size": 487
+    },
+    "shop/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "shop/config.py": {
+      "sha256": "7977bb5cc75d59da45548e172f7797239631dbda33f967b7a3315d1f7b200720",
+      "size": 337
+    },
+    "shop/payments.py": {
+      "sha256": "8e2e334b9594ae961e0c78172227f739bf6ac3ad818862bf7c8d8f91bc7d5590",
+      "size": 442
+    }
+  },
+  "stderr_tail": ""
+}

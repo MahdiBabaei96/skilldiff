@@ -1,0 +1,15 @@
+# Adding a broad "team conventions" skill, on a team that runs Haiku.
+include = ["../shop/tasks.toml"]
+
+[before]
+skills = ["../shop/skills"]
+
+[after]
+skills = ["../shop/skills", "../shop/candidates/team-conventions"]
+
+[run]
+repeats = 5
+parallel = 10
+model = "haiku"
+max_turns = 30
+max_budget_usd = 2.0

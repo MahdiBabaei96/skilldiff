@@ -1,0 +1,14 @@
+# Used by CI to test action.yml end to end with the deterministic fake agent.
+[before]
+skills = ["skills"]
+[after]
+skills = ["skills", "candidate"]
+[run]
+repeats = 2
+agent_cmd = "python3 $GITHUB_WORKSPACE/tests/fake_claude.py"
+[[tasks]]
+id = "review"
+prompt = "please review src/app.py"
+fixture = "fx"
+expect_skill = "careful-review"
+rules = [{ id = "read-only", type = "files_unchanged", path = "src/**" }, { id = "review-file", type = "file_exists", path = "REVIEW.md" }]

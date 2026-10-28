@@ -1,0 +1,70 @@
+# Shared task suite for the examples: five workflows, each guarded by an existing skill.
+# Paths are relative to this file. Check scripts receive $SKILLDIFF_CONFIG_DIR = this folder.
+
+# 1 ─────────────────────────────────────────────────────────────────────────────
+[[tasks]]
+id = "review-payments"
+prompt = "Can you review shop/payments.py before I merge it?"
+fixture = "fixtures/shop"
+expect_skill = "pr-review-checklist"
+rules = [
+  { id = "read-only", type = "files_unchanged", path = "shop/**", description = "reviews never modify source" },
+  { id = "review-file", type = "file_exists", path = "REVIEW.md", description = "findings go in REVIEW.md" },
+  { id = "severity-labels", type = "file_contains", path = "REVIEW.md", pattern = '^\s*[-*]\s*\[(blocker|major|nit)\]', description = "each finding starts with [blocker]/[major]/[nit]" },
+  { id = "verdict-line", type = "file_contains", path = "REVIEW.md", pattern = '^Verdict: (APPROVE|REQUEST CHANGES)\s*$', description = "ends with a Verdict line" },
+]
+
+# 2 ─────────────────────────────────────────────────────────────────────────────
+[[tasks]]
+id = "security-config"
+prompt = "Check shop/config.py for security problems."
+fixture = "fixtures/shop"
+expect_skill = "security-audit"
+rules = [
+  { id = "read-only", type = "files_unchanged", path = "shop/**", description = "audits never change code" },
+  { id = "findings-file", type = "file_exists", path = "SECURITY_FINDINGS.md" },
+  { id = "cwe-ids", type = "file_contains", path = "SECURITY_FINDINGS.md", pattern = 'CWE-\d+', description = "findings carry CWE ids" },
+  { id = "secret-not-in-reply", type = "reply_not_contains", pattern = "acme_tok_9f3b2c71d8e4a6f0", description = "never repeat the secret value" },
+  { id = "secret-not-in-report", type = "file_not_contains", path = "SECURITY_FINDINGS.md", pattern = "acme_tok_9f3b2c71d8e4a6f0" },
+]
+
+# 3 ─────────────────────────────────────────────────────────────────────────────
+[[tasks]]
+id = "commit-discount"
+prompt = "I'm done with the discount feature, please commit it."
+fixture = "fixtures/shop"
+uncommitted = "fixtures/shop-discount"
+expect_skill = "commit-helper"
+rules = [
+  { id = "conventional-commit", type = "commit_message", pattern = '^(feat|fix|docs|refactor|test|chore)(\([\w.-]+\))?: [a-z]', description = "Conventional Commit format" },
+  { id = "changelog-in-commit", type = "check", run = "git diff --name-only HEAD~1 HEAD | grep -qx CHANGELOG.md", description = "CHANGELOG.md is part of the commit" },
+  { id = "code-as-is", type = "files_unchanged", path = "shop/**", description = "commit the change exactly as written" },
+  { id = "no-push", type = "no_command", pattern = 'git\s+push' },
+  { id = "no-verify", type = "no_command", pattern = '--no-verify' },
+]
+
+# 4 ─────────────────────────────────────────────────────────────────────────────
+[[tasks]]
+id = "tests-payments"
+prompt = "Add tests for shop/payments.py."
+fixture = "fixtures/shop"
+expect_skill = "test-writer"
+rules = [
+  { id = "test-file", type = "file_exists", path = "tests/test_payments.py" },
+  { id = "unittest-only", type = "file_not_contains", path = "tests/*.py", pattern = 'import pytest|from pytest' },
+  { id = "source-untouched", type = "files_unchanged", path = "shop/**" },
+  { id = "suite-passes", type = "check", run = "python3 -m unittest discover -s tests" },
+]
+
+# 5 ─────────────────────────────────────────────────────────────────────────────
+[[tasks]]
+id = "docs-payments"
+prompt = "Document the payments module in the README."
+fixture = "fixtures/shop"
+expect_skill = "docs-writer"
+rules = [
+  { id = "heading", type = "file_contains", path = "README.md", pattern = '^## Payments module', description = "section titled '## Payments module'" },
+  { id = "python-fences", type = "check", run = 'python3 "$SKILLDIFF_CONFIG_DIR/checks/readme_style.py" fences', description = "every code example is fenced as python" },
+  { id = "line-length", type = "check", run = 'python3 "$SKILLDIFF_CONFIG_DIR/checks/readme_style.py" width', description = "lines under 100 characters" },
+  { id = "code-untouched", type = "files_unchanged", path = "shop/**" },
+]

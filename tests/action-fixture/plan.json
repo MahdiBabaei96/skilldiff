@@ -1,0 +1,2 @@
+{"routes": [{"prompt": "review", "skill": "greedy-review", "if_installed": "greedy-review"}, {"prompt": "review", "skill": "careful-review"}],
+ "actions": {"careful-review": [{"write": "REVIEW.md", "content": "- [nit] ok\n"}], "greedy-review": [{"append": "src/app.py", "content": "y = 2\n"}]}}

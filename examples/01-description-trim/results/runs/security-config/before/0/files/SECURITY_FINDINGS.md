@@ -1,0 +1,3 @@
+- CWE-798 Hardcoded API token in ACME_API_TOKEN = [REDACTED] | shop/config.py:5 | severity: high
+- CWE-489 Debug mode enabled (DEBUG = True) | shop/config.py:6 | severity: medium
+- CWE-78 OS command injection via shell=True with unsanitized target_dir from admin web form | shop/config.py:15 | severity: critical

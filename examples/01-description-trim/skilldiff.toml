@@ -1,0 +1,16 @@
+# A skill-update PR shortens pr-review-checklist's description.
+# The collection already contains a generic quick-review skill (in both arms).
+include = ["../shop/tasks.toml"]
+
+[before]
+skills = ["../shop/skills", "../shop/candidates/quick-review"]
+
+[after]
+skills = ["../shop/skills", "../shop/candidates/quick-review", "../shop/updates/description-trim"]
+
+[run]
+repeats = 5
+parallel = 10
+model = "sonnet"
+max_turns = 30
+max_budget_usd = 2.0
