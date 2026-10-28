@@ -879,8 +879,8 @@
           }
         },
         "files_changed": {
-          "tests/__init__.py": 3,
-          "tests/test_payments.py": 5
+          "tests/test_payments.py": 5,
+          "tests/__init__.py": 3
         },
         "cost_usd": 0.05898106,
         "cost_usd_total": 0.2949053,

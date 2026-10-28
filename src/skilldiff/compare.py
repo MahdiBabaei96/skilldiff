@@ -9,6 +9,11 @@ from .stats import confidence, fisher_one_sided, rate
 VERDICT_ORDER = ["regressed", "substituted", "less-reliable", "improved", "unchanged", "no-data"]
 
 
+def _ranked(c: Counter) -> dict:
+    """Counts sorted by count, then name, so reports are byte-for-byte reproducible."""
+    return dict(sorted(c.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
 def _mean(xs):
     xs = [x for x in xs if x is not None]
     return mean(xs) if xs else None
@@ -19,7 +24,7 @@ def _arm_summary(recs: list[dict], task: dict) -> dict:
     first = Counter(r["transcript"].get("first_skill") or "(none)" for r in valid)
     anyuse = Counter()
     for r in valid:
-        for s in set(r["transcript"].get("skills_invoked") or []):
+        for s in sorted(set(r["transcript"].get("skills_invoked") or [])):
             anyuse[s] += 1
     rules = {}
     for rule in task["rules"]:
@@ -40,11 +45,11 @@ def _arm_summary(recs: list[dict], task: dict) -> dict:
         "errors": len(recs) - len(valid),
         "error_messages": sorted({(r["transcript"].get("error") or "")[:200] for r in recs if r["transcript"].get("is_error")}),
         "valid": len(valid),
-        "first_skill": dict(first.most_common()),
-        "skills_used": dict(anyuse.most_common()),
+        "first_skill": _ranked(first),
+        "skills_used": _ranked(anyuse),
         "expected_first": sum(1 for r in valid if exp and r["transcript"].get("first_skill") == exp) if exp else None,
         "rules": rules,
-        "files_changed": dict(files),
+        "files_changed": _ranked(files),
         "cost_usd": _mean([r["transcript"].get("cost_usd") for r in valid]),
         "cost_usd_total": sum(r["transcript"].get("cost_usd") or 0 for r in recs),
         "duration_s": (_mean([r["transcript"].get("duration_ms") for r in valid]) or 0) / 1000 or None,

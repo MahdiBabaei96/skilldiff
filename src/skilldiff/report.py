@@ -229,8 +229,19 @@ def _timeline(rec: dict) -> str:
             + f'<ul class="tl">{"".join(items) or "<li>no steps recorded</li>"}</ul></div>')
 
 
+def _evidence_html(x: dict) -> str:
+    count = x.get("count", 1)
+    same = f", same in {count} runs" if count > 1 else ""
+    return (f'<div class="mono" style="color:var(--muted);margin-top:6px">after #{x["rep"]}{same} · '
+            f'first skill {_e(x["first_skill"] or "none")}</div><pre>{_e(x["evidence"])}</pre>')
+
+
+WEAK_MARK = ' <span class="mono" title="a rule or the skill choice got worse, by less than the threshold">↘</span>'
+
+
 def to_html(cmp: dict, records: list[dict]) -> str:
     m = cmp["meta"]
+    head_html = re.sub(r"`([^`]+)`", r"<code>\1</code>", _e(headline(cmp)))
     tb, ta = cmp["cost_total_usd"]["before"], cmp["cost_total_usd"]["after"]
     c = cmp["counts"]
     stats = [
@@ -248,7 +259,7 @@ def to_html(cmp: dict, records: list[dict]) -> str:
         rows.append(
             f'<tr><td><a href="#t-{_e(t["id"])}"><code>{_e(t["id"])}</code></a></td>'
             f'<td><span class="pill {t["verdict"]}">{_e(LABEL[t["verdict"]])}</span>'
-            f'{" <span class=mono title=\"a rule or the skill choice got worse, by less than the threshold\">↘</span>" if t.get("weak_signal") else ""}</td>'
+            f'{WEAK_MARK if t.get("weak_signal") else ""}</td>'
             f'<td>{_e(_frac(sel["before"]) + " → " + _frac(sel["after"])) if sel else "–"}</td>'
             f'<td>{_bar(rb, nb)}<span class="mono">{rb}/{nb}</span></td><td>{_bar(ra, na, True)}<span class="mono">{ra}/{na}</span></td>'
             f'<td class="mono">{_e(_money(t["cost_delta_usd"]))}</td></tr>')
@@ -258,7 +269,7 @@ def to_html(cmp: dict, records: list[dict]) -> str:
         for r in t["rules"]:
             label = {"regressed": f'<span class="pill regressed">broken · {r["confidence"]} (p={r["p"]:.3f})</span>' if r["p"] is not None else '<span class="pill regressed">broken</span>',
                      "improved": '<span class="pill improved">better</span>', "weaker": '<span class="pill unchanged">lower, below threshold</span>', "unchanged": ""}[r["status"]]
-            ev = "".join(f'<div class="mono" style="color:var(--muted);margin-top:6px">after #{x["rep"]}{f", same in {x.get('count', 1)} runs" if x.get("count", 1) > 1 else ""} · first skill {_e(x["first_skill"] or "none")}</div><pre>{_e(x["evidence"])}</pre>' for x in r["evidence"])
+            ev = "".join(_evidence_html(x) for x in r["evidence"])
             rule_rows.append(f'<tr><td><code>{_e(r["id"])}</code><div style="color:var(--muted);font-size:13px">{_e(r["description"] or r["type"])}</div>{ev}</td>'
                              f'<td class="mono">{_frac(r["before"])}</td><td class="mono">{_frac(r["after"])}</td><td>{label}</td></tr>')
         sel_html = ""
@@ -286,7 +297,7 @@ def to_html(cmp: dict, records: list[dict]) -> str:
             f'<details><summary>Run timelines ({len(runs)} runs)</summary><div class="runs">{"".join(_timeline(r) for r in runs)}</div></details></section>')
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>skilldiff report</title><style>{_CSS}</style></head><body><main>
-<h1>skilldiff report</h1><p class="head">{re.sub(r"`([^`]+)`", r"<code>\1</code>", _e(headline(cmp)))}</p>
+<h1>skilldiff report</h1><p class="head">{head_html}</p>
 <p class="sub">{m['repeats']} repeats per arm · model {_e(m.get('model') or 'default')} · Claude Code {_e(m.get('agent_version') or '?')} · {_e(m.get('finished_at', ''))}</p>
 {"".join(f'<p class="sub">⚠️ {_e(w)}</p>' for w in cmp.get("warnings", []))}<div class="stats">{"".join(f'<div class="stat"><b>{_e(v)}</b><span>{_e(k)}</span></div>' for v, k in stats)}</div>
 <div class="wrap"><table><tr><th>Workflow</th><th>Result</th><th>Expected skill first</th><th>Rules before</th><th>Rules after</th><th>Cost/run Δ</th></tr>{"".join(rows)}</table></div>

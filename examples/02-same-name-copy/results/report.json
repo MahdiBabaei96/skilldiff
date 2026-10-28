@@ -302,9 +302,9 @@
           }
         },
         "files_changed": {
-          "SECURITY_FINDINGS.md": 2,
           "SECURITY.md": 3,
-          "shop/config.py": 3
+          "shop/config.py": 3,
+          "SECURITY_FINDINGS.md": 2
         },
         "cost_usd": 0.05999232,
         "cost_usd_total": 0.2999616,
