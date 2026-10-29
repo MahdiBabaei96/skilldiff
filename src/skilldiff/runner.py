@@ -63,12 +63,14 @@ def _run_process(cmd: list[str], cwd: Path, env: dict, timeout: int, out_path: P
         try:
             _, err = proc.communicate(timeout=timeout)
             return proc.returncode, False, (err or "")[-2000:]
-        except subprocess.TimeoutExpired:
+        except (subprocess.TimeoutExpired, KeyboardInterrupt) as exc:
             try:
                 os.killpg(proc.pid, signal.SIGKILL)
             except (ProcessLookupError, PermissionError):
                 proc.kill()
             _, err = proc.communicate()
+            if isinstance(exc, KeyboardInterrupt):
+                raise
             return proc.returncode, True, (err or "")[-2000:]
 
 

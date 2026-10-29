@@ -1,0 +1,9 @@
+{
+  "routes": [
+    {"prompt": "review", "skill": "formatter", "if_all_installed": ["formatter", "policy"]},
+    {"prompt": "review", "skill": "review"}
+  ],
+  "actions": {
+    "formatter": [{"write": "app.py", "content": "value = 2\n"}]
+  }
+}

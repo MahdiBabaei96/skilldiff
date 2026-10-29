@@ -21,6 +21,20 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e ".[dev]"
       - run: python -m pytest -q
+      - name: Exercise the diagnosis demo without model calls
+        env:
+          SKILLDIFF_REPO: ${{ github.workspace }}
+          FAKE_CLAUDE_PLAN: ${{ github.workspace }}/examples/diagnose/plan.json
+        run: |
+          skilldiff diagnose -c examples/diagnose/skilldiff.toml --task review --rule read-only -o "$RUNNER_TEMP/diagnosis-demo" --max-runs 120
+          python - "$RUNNER_TEMP/diagnosis-demo/diagnosis.json" <<'PY'
+          import json, sys
+          result = json.load(open(sys.argv[1]))
+          assert result['status'] == 'confirmed-1-minimal'
+          assert result['candidate'] == ['formatter', 'policy', 'review']
+          assert result['runs_used'] <= 120
+          assert len(result['confirmation']) == 2
+          PY
       - name: Re-render the committed example reports
         run: |
           for d in examples/0*/results; do skilldiff report "$d" --format headline; done

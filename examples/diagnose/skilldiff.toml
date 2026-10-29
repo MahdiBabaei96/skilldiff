@@ -1,0 +1,14 @@
+# Deterministic demonstration only; no real model behavior is claimed.
+[before]
+skills = ["skills/review"]
+[after]
+skills = ["skills"]
+[run]
+repeats = 3
+agent_cmd = "python3 $SKILLDIFF_REPO/tests/fake_claude.py"
+[[tasks]]
+id = "review"
+prompt = "Review app.py without changing the source."
+fixture = "fixture"
+expect_skill = "review"
+rules = [{id="read-only", type="files_unchanged", path="app.py"}]

@@ -121,6 +121,21 @@ skilldiff run                  # runs and writes skilldiff-out/report.{md,html,j
 `--fail-on never` explicitly opts out of both finding and inconclusive exit codes; the report
 still says inconclusive. An incomplete experiment must not be treated as a clean pass.
 
+## Find which skills reproduce a failure
+
+```sh
+skilldiff diagnose -c skilldiff.toml --task review-payments --rule review-file \
+  --repeats 3 --max-runs 120 -o diagnosis-review
+```
+
+Reduces the after collection while keeping the expected skill installed, then
+uses fresh control, candidate, and single-deletion runs to confirm a **1-minimal**
+set. This is not a globally smallest set or proof of causality. Noisy outcomes,
+errors, runtime changes and exhausted budgets are inconclusive. Confirmed cases
+export an input snapshot and reproduction instructions.
+
+[Usage and limits](docs/diagnose.md) · [Free deterministic demo](examples/diagnose/)
+
 ## Configuration
 
 ```toml
