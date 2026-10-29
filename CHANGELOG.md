@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add `skilldiff diagnose` to reduce one task/rule failure to a freshly confirmed 1-minimal skill collection, preserving expected and explicitly pinned skills.
+- Bound diagnosis runs, stop on noisy/error/runtime-drift evidence, and export input snapshots with hashes and reproduction instructions.
+- Add a deterministic multi-skill interaction demo and diagnosis tests; no new paid experiments or novelty claims.
+
 - Return exit code 2 for failed or missing runs; report incomplete experiments prominently and fail CI by default.
 - Replace confidence labels with observed drops, raw p-values, and Holm adjustment across all comparable rules and skill selections.
 - Clarify that temporary workspaces are not a sandbox and saved outputs are not redacted; warn before execution.

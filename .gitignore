@@ -6,3 +6,5 @@ build/
 dist/
 skilldiff-out/
 skilldiff-control/
+skilldiff-diagnosis/
+diagnosis-demo/

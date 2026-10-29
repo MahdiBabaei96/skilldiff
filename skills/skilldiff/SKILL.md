@@ -113,7 +113,27 @@ skill's job; give the existing skill a more specific description; rename a folde
 collides; merge two skills that do the same job. Re-run the same config to confirm the fix.
 `skilldiff report <out> --min-drop 0.3` re-scores saved runs without new API calls.
 
-## CI
+## Localize a measured failure
+
+When `run` identifies a rule regression and the user asks which co-installed skills
+are needed to reproduce it, use `skilldiff diagnose`:
+
+```bash
+skilldiff diagnose -c skilldiff.toml --task TASK_ID --rule RULE_ID --repeats 3 --max-runs 120 -o diagnosis
+```
+
+Read `docs/diagnose.md` in the installed source if available. The task's expected
+skill stays pinned; use `--keep-skill` for other dependencies. This command supports
+skill folders and built-in rules, not plugin bundles or shell `check` rules.
+
+Before starting, explain the cap on agent runs, estimate the possible cost from
+the user's configured model, and get approval as in step 4. Do not call a reduced
+set globally smallest or infer a causal mechanism. Only `confirmed-1-minimal`
+establishes the empirical single-deletion criterion; a zero exit code can also
+mean `not-reproduced`, so always read `diagnosis.json`. Exported inputs and logs
+are not redacted, and temporary workspaces are not a security sandbox.
+
+## CI integration
 
 The repository ships a GitHub Action that runs the experiment on pull requests that touch
 skills and posts the report as a comment. See the README's "GitHub Action" section.

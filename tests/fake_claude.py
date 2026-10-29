@@ -43,6 +43,8 @@ def main():
 
     skill = None
     for route in plan["routes"]:
+        if not set(route.get("if_all_installed", [])).issubset(installed):
+            continue
         if route.get("if_installed") and route["if_installed"] not in installed:
             continue
         if re.search(route["prompt"], prompt, re.I) and route["skill"] in installed:

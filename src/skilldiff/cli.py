@@ -229,6 +229,26 @@ def cmd_init(args) -> int:
     return 0
 
 
+def cmd_diagnose(args) -> int:
+    from .diagnose import diagnose
+
+    cfg = config_mod.load(args.config)
+    if args.model:
+        cfg.run.model = args.model
+    if args.agent_cmd:
+        cfg.run.agent_cmd = args.agent_cmd
+    print("Notice: diagnose executes skills in temporary workspaces, not a security sandbox. "
+          "Agents inherit your environment; outputs and exported inputs are not redacted. "
+          f"At most {args.max_runs} agent runs will be started.", file=sys.stderr)
+    result = diagnose(cfg, args.task, args.rule, Path(args.out).resolve(),
+                      repeats=args.repeats if args.repeats is not None else cfg.run.repeats,
+                      max_runs=args.max_runs, pass_rate=args.pass_rate, failure_rate=args.failure_rate,
+                      keep_skills=args.keep_skill, log=lambda s: print(s, file=sys.stderr))
+    print(f"{result['status']}: {result['message']}")
+    print(f"Report: {Path(args.out).resolve() / 'diagnosis.md'}")
+    return 0 if result['status'] in ('confirmed-1-minimal', 'not-reproduced') else 2
+
+
 def _arm_flags(sp):
     sp.add_argument("--before-skills", nargs="+", metavar="PATH", help="override [before].skills")
     sp.add_argument("--after-skills", nargs="+", metavar="PATH", help="override [after].skills")
@@ -263,6 +283,20 @@ def main(argv=None) -> int:
     rep.add_argument("--min-drop", type=float, help="re-score with a different threshold")
     rep.add_argument("--fail-on", choices=["regression", "substitution", "never"], default="never")
     rep.set_defaults(fn=cmd_report)
+
+    d = sub.add_parser("diagnose", help="reduce a rule failure to a freshly confirmed 1-minimal skill set")
+    d.add_argument("-c", "--config", default="skilldiff.toml")
+    d.add_argument("--task", required=True, help="one task id from the config")
+    d.add_argument("--rule", required=True, help="one built-in rule id from that task")
+    d.add_argument("-o", "--out", default="skilldiff-diagnosis")
+    d.add_argument("--repeats", type=int, help="runs per probe (at least 2; default: config)")
+    d.add_argument("--max-runs", type=int, default=120, help="hard cap including fresh confirmations")
+    d.add_argument("--keep-skill", action="append", default=[], help="pin a skill (repeatable; expected skill is always pinned)")
+    d.add_argument("--pass-rate", type=float, default=0.0, help="maximum failure frequency considered passing")
+    d.add_argument("--failure-rate", type=float, default=1.0, help="minimum failure frequency considered failing")
+    d.add_argument("--model", help="override model")
+    d.add_argument("--agent-cmd", help="override agent command")
+    d.set_defaults(fn=cmd_diagnose)
 
     v = sub.add_parser("validate", help="check the config, list skills per arm, count runs")
     v.add_argument("-c", "--config", default="skilldiff.toml")
